@@ -1,0 +1,14 @@
+.{
+    .name = .netcode_io,
+    .version = "0.0.1",
+    .fingerprint = 0x3f2effd5a87221bc,
+    .dependencies = .{
+        .quic = .{ .path = "../quic-zig" },
+    },
+    .minimum_zig_version = "0.17.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

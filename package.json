@@ -1,0 +1,29 @@
+{
+  "name": "netcode-io",
+  "version": "0.0.1",
+  "description": "WebSocket and WebTransport server for Node.js, powered by quic-zig",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/endel/node-netcode-io.git"
+  },
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "zig build -Doptimize=ReleaseFast",
+    "test": "zig build test && node --test --test-timeout=20000 test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "webtransport",
+    "websocket",
+    "quic",
+    "http3",
+    "zig"
+  ],
+  "license": "MIT"
+}
