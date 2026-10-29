@@ -4,8 +4,8 @@
 //!
 //!     u8 kind | u8 flags | u16 code | u32 len | u64 conn | u64 id
 //!
-//! `conn` is a WebSocket's id or a QUIC connection's (one counter draws
-//! both); `id` is a session or stream id, by kind. Ids stay below 2^53, so JS
+//! `conn` is a WebSocket's, a raw connection's or a QUIC connection's id
+//! (one counter draws them all); `id` is a session or stream id, by kind. Ids stay below 2^53, so JS
 //! reads them as Numbers.
 //!
 //! `lib/index.js` mirrors this file; change both together.
@@ -41,6 +41,19 @@ pub const Event = enum(u8) {
     stream_opened = 11,
     /// id: session.
     session_draining = 12,
+    /// conn: an HTTP/1.1 connection JS serves itself, from its first
+    /// request on. Payload: an `Address`.
+    raw_open = 13,
+    /// conn: raw. Payload: the bytes, TLS already removed.
+    raw_data = 14,
+    /// conn: raw, its last event.
+    raw_close = 15,
+    /// conn: raw. The answer to a `raw_send` with `flag.drain`: what JS
+    /// wrote before is down to the kernel's buffers.
+    raw_drain = 16,
+    /// conn: raw. The peer sent its last byte; the connection stays open
+    /// for writes until `raw_close`.
+    raw_end = 17,
     /// The server stopped: the last event.
     stopped = 20,
     _,
@@ -68,6 +81,13 @@ pub const Command = enum(u8) {
     datagram_send = 10,
     /// Close the QUIC connection now, every session on it.
     connection_close = 11,
+    /// conn: raw. `flag.drain`, `flag.ref`. Payload: the bytes.
+    raw_send = 12,
+    /// conn: raw. `flag.abort`. What was sent goes out first.
+    raw_close = 13,
+    /// conn: raw. No `raw_data` until `raw_resume`.
+    raw_pause = 14,
+    raw_resume = 15,
     stop = 20,
     _,
 };
@@ -81,6 +101,10 @@ pub const flag = struct {
     pub const abrupt: u8 = 1;
     /// stream_open: bidirectional.
     pub const bidi: u8 = 1;
+    /// raw_send: answer with `raw_drain` once the output is low again.
+    pub const drain: u8 = 1;
+    /// raw_close: drop what is queued, as `destroy()` does.
+    pub const abort: u8 = 1;
     /// Sends: the payload is u32 offset, u32 length of bytes earlier in the
     /// same batch, so a buffer sent to many peers crosses once.
     pub const ref: u8 = 2;
@@ -162,7 +186,7 @@ pub const Reader = struct {
 /// A peer's address, path and headers: the payload of `ws_open` and
 /// `session_request`.
 ///
-///     u8 family (4, 6, or 0 unknown) | u16 port | [16]u8 address
+///     Address
 ///     u16 path length | path
 ///     u16 header count | (u16 name length | name | u16 value length | value)*
 ///
@@ -180,11 +204,7 @@ pub const Request = struct {
         errdefer out.shrinkRetainingCapacity(start);
         try out.appendNTimes(gpa, 0, header_len);
 
-        var fixed: [19]u8 = undefined;
-        fixed[0] = addr.family;
-        std.mem.writeInt(u16, fixed[1..3], addr.port, .little);
-        fixed[3..19].* = addr.bytes;
-        try out.appendSlice(gpa, &fixed);
+        try out.appendSlice(gpa, &addr.encode());
         try appendString(gpa, out, path[0..@min(path.len, std.math.maxInt(u16))]);
 
         const count_at = out.items.len;
@@ -212,10 +232,19 @@ pub const Request = struct {
     }
 };
 
+/// u8 family (4, 6, or 0 unknown) | u16 port | [16]u8 address
 pub const Address = struct {
     family: u8 = 0,
     port: u16 = 0,
     bytes: [16]u8 = @splat(0),
+
+    pub fn encode(self: Address) [19]u8 {
+        var out: [19]u8 = undefined;
+        out[0] = self.family;
+        std.mem.writeInt(u16, out[1..3], self.port, .little);
+        out[3..19].* = self.bytes;
+        return out;
+    }
 
     pub fn fromSockaddr(sa: *const std.posix.sockaddr.storage) Address {
         const posix = std.posix;

@@ -246,14 +246,27 @@ const Handler = struct {
     /// QUIC connections JS has heard of, by `Session.id()`.
     conns: std.AutoHashMapUnmanaged(u64, *ConnEntry) = .empty,
     sockets: std.AutoHashMapUnmanaged(u64, *event_loop.WsConn) = .empty,
+    raws: std.AutoHashMapUnmanaged(u64, Raw) = .empty,
     paused: std.ArrayList(Paused) = .empty,
     stopping: bool = false,
 
+    /// `stream` 0 is the connection itself, for a raw one.
     const Paused = struct { conn: u64, stream: u64 };
+
+    const Raw = struct {
+        conn: *event_loop.RawConn,
+        /// JS asked for `raw_drain`, which `onRawDrain` owes.
+        drain_wanted: bool = false,
+        /// By `raw_pause`, which the queue's own resume leaves alone.
+        js_paused: bool = false,
+        /// By the queue's cap.
+        cap_paused: bool = false,
+    };
 
     fn deinit(self: *Handler) void {
         self.conns.deinit(gpa);
         self.sockets.deinit(gpa);
+        self.raws.deinit(gpa);
         self.paused.deinit(gpa);
     }
 
@@ -284,8 +297,22 @@ const Handler = struct {
         self.host.markPaused();
     }
 
+    fn pauseRaw(self: *Handler, raw: *Raw) void {
+        if (raw.cap_paused) return;
+        self.paused.append(gpa, .{ .conn = raw.conn.id(), .stream = 0 }) catch return;
+        raw.cap_paused = true;
+        raw.conn.pauseReading();
+        self.host.markPaused();
+    }
+
     fn resumeReads(self: *Handler) void {
         for (self.paused.items) |p| {
+            if (p.stream == 0) {
+                const raw = self.raws.getPtr(p.conn) orelse continue;
+                raw.cap_paused = false;
+                if (!raw.js_paused) raw.conn.resumeReading();
+                continue;
+            }
             var s = self.sessionOf(p.conn) orelse continue;
             s.resumeStream(p.stream);
         }
@@ -309,6 +336,36 @@ const Handler = struct {
     pub fn onWsClose(self: *Handler, ws: *event_loop.WsConn, code: u16, reason: []const u8) void {
         if (!self.sockets.remove(ws.id())) return;
         _ = self.host.emit(.ws_close, .{ .conn = ws.id(), .code = code }, &.{reason});
+    }
+
+    // ── Raw HTTP/1.1 ─────────────────────────────────────────────────
+
+    pub fn onRawOpen(self: *Handler, raw: *event_loop.RawConn) void {
+        self.raws.put(gpa, raw.id(), .{ .conn = raw }) catch return raw.close();
+        const addr = wire.Address.fromSockaddr(raw.peerAddress()).encode();
+        _ = self.host.emit(.raw_open, .{ .conn = raw.id() }, &.{&addr});
+    }
+
+    pub fn onRawData(self: *Handler, raw: *event_loop.RawConn, data: []const u8) void {
+        const pending = self.host.emit(.raw_data, .{ .conn = raw.id() }, &.{data});
+        if (pending > max_pending_events) if (self.raws.getPtr(raw.id())) |r| self.pauseRaw(r);
+    }
+
+    pub fn onRawClose(self: *Handler, raw: *event_loop.RawConn) void {
+        if (!self.raws.remove(raw.id())) return;
+        _ = self.host.emit(.raw_close, .{ .conn = raw.id() }, &.{});
+    }
+
+    pub fn onRawEnd(self: *Handler, raw: *event_loop.RawConn) void {
+        if (!self.raws.contains(raw.id())) return;
+        _ = self.host.emit(.raw_end, .{ .conn = raw.id() }, &.{});
+    }
+
+    pub fn onRawDrain(self: *Handler, raw: *event_loop.RawConn) void {
+        const r = self.raws.getPtr(raw.id()) orelse return;
+        if (!r.drain_wanted) return;
+        r.drain_wanted = false;
+        _ = self.host.emit(.raw_drain, .{ .conn = raw.id() }, &.{});
     }
 
     // ── WebTransport ─────────────────────────────────────────────────
@@ -432,6 +489,32 @@ const Handler = struct {
             .connection_close => {
                 var s = self.sessionOf(h.conn) orelse return;
                 s.closeConnection();
+            },
+            .raw_send => {
+                const raw = self.raws.getPtr(h.conn) orelse return;
+                const data = r.bytes(rec) orelse return;
+                // Closed: raw_close follows.
+                raw.conn.write(data) catch return;
+                if (h.flags & wire.flag.drain == 0) return;
+                if (raw.conn.owesDrain()) {
+                    raw.drain_wanted = true;
+                } else {
+                    _ = self.host.emit(.raw_drain, .{ .conn = h.conn }, &.{});
+                }
+            },
+            .raw_close => {
+                const raw = self.raws.get(h.conn) orelse return;
+                if (h.flags & wire.flag.abort != 0) raw.conn.abort() else raw.conn.close();
+            },
+            .raw_pause => {
+                const raw = self.raws.getPtr(h.conn) orelse return;
+                raw.js_paused = true;
+                raw.conn.pauseReading();
+            },
+            .raw_resume => {
+                const raw = self.raws.getPtr(h.conn) orelse return;
+                raw.js_paused = false;
+                if (!raw.cap_paused) raw.conn.resumeReading();
             },
             .stop => self.stop(),
             _ => {},

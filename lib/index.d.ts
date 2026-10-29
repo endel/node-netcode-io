@@ -1,12 +1,15 @@
+import type { Server as HttpServer } from 'node:http';
+import type { Duplex } from 'node:stream';
+
 export interface ServerOptions {
   /** Default "0.0.0.0". */
   host?: string;
   /** UDP for QUIC, and TCP for WebSockets unless `websocket.port` says otherwise. 0 lets the kernel pick. */
   port: number;
-  /** PEM certificate chain file: TLS for both WebTransport and wss://. */
-  cert: string;
-  /** PEM private key file: ECDSA P-256, Ed25519 or RSA. */
-  key: string;
+  /** PEM certificate chain, or a path to one: TLS for both WebTransport and wss://. */
+  cert: string | Uint8Array;
+  /** PEM private key, or a path to one: ECDSA P-256, Ed25519 or RSA. */
+  key: string | Uint8Array;
   websocket?: {
     /** false serves ws:// and http://, for a proxy that terminates TLS. Default true. */
     tls?: boolean;
@@ -59,6 +62,54 @@ export interface Handler {
   onDatagram?(conn: number, session: number, data: Buffer): void;
   /** The QUIC connection's last event, after every session on it closed. */
   onConnectionClosed?(conn: number): void;
+
+  /**
+   * An HTTP/1.1 connection that isn't a WebSocket upgrade, as bytes from its
+   * first request line on, TLS already removed. Declaring this takes them
+   * from `serveHttp`.
+   */
+  onRawOpen?(raw: number, address: RawAddress): void;
+  onRawData?(raw: number, data: Buffer): void;
+  /** The connection's last event. */
+  onRawClose?(raw: number): void;
+  /** The answer to `sendRaw(raw, data, true)`: the output is low again. */
+  onRawDrain?(raw: number): void;
+  /**
+   * The peer sent its last byte: a FIN, or TLS's close_notify. The
+   * connection stays open for writes until `closeRaw`, since an HTTP/1.1
+   * client may half-close after its request.
+   */
+  onRawEnd?(raw: number): void;
+}
+
+export interface RawAddress {
+  readonly remoteAddress: string | undefined;
+  readonly remotePort: number;
+  readonly remoteFamily: 'IPv4' | 'IPv6' | undefined;
+}
+
+/**
+ * A raw connection shaped like `net.Socket`, which `serveHttp` hands to an
+ * `http.Server` through its 'connection' event. Writes wait once 256 KiB
+ * are on their way, until the loop has sent them.
+ */
+export declare class RawSocket extends Duplex {
+  readonly id: number;
+  readonly remoteAddress: string | undefined;
+  readonly remotePort: number;
+  readonly remoteFamily: 'IPv4' | 'IPv6' | undefined;
+  /** quic-zig terminated TLS for it. */
+  readonly encrypted: boolean;
+  readonly connecting: false;
+  bytesRead: number;
+  bytesWritten: number;
+  setTimeout(ms: number, callback?: () => void): this;
+  setNoDelay(noDelay?: boolean): this;
+  setKeepAlive(enable?: boolean, initialDelay?: number): this;
+  ref(): this;
+  unref(): this;
+  address(): {};
+  destroySoon(): void;
 }
 
 type Bytes = Uint8Array | ArrayBuffer | string;
@@ -67,6 +118,11 @@ type Bytes = Uint8Array | ArrayBuffer | string;
  * A WebSocket and WebTransport server on one port, run by quic-zig on a
  * thread of its own. Calls queue commands; one batch per turn reaches that
  * thread. A command for a socket, session or stream that's gone does nothing.
+ *
+ * Sends copy `data` before they return. A buffer of 64 bytes or more sent
+ * again in the same turn goes as a reference to its first copy, so a
+ * broadcast crosses once: a buffer reused for other bytes within a turn must
+ * be a new object each time (`sendRaw` excepted, which never refers back).
  */
 export declare class Server {
   /** Binds now: a port in use throws here. */
@@ -91,6 +147,18 @@ export declare class Server {
   sendDatagram(conn: number, session: number, data: Bytes): void;
   /** Ends the QUIC connection at once, every session on it. */
   closeConnection(conn: number): void;
+
+  /**
+   * Raw connections go to `httpServer` as `RawSocket`s, unless the handler
+   * has `onRawOpen`. Without either, each request gets a 404.
+   */
+  serveHttp(httpServer: HttpServer): this;
+  /** `drain`: answer with `onRawDrain` once the output is low again. */
+  sendRaw(raw: number, data: Bytes, drain?: boolean): void;
+  /** What was sent goes out first, unless `abort`: then it's dropped, as `destroy()` does. */
+  closeRaw(raw: number, abort?: boolean): void;
+  pauseRaw(raw: number): void;
+  resumeRaw(raw: number): void;
 
   /** Closes every connection; resolves once the loop has exited. */
   stop(): Promise<void>;

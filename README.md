@@ -18,6 +18,19 @@ const server = new Server({ port: 4433, cert: 'server.crt', key: 'server.key' },
 The API is ids and callbacks, nothing per connection: a framework builds
 its own objects on top. `lib/index.d.ts` documents every call.
 
+Plain HTTP on the same port goes to Node's own HTTP implementation, so
+Express and friends work unchanged:
+
+```js
+const app = express();
+server.serveHttp(http.createServer(app));
+```
+
+quic-zig answers WebSocket upgrades itself, and hands every other HTTP/1.1
+connection over as bytes, TLS already removed, from its first request on.
+`serveHttp` wraps each in a `net.Socket`-shaped `RawSocket` for the
+`http.Server`'s 'connection' event; the server is never `listen()`ed.
+
 ## How it runs
 
 quic-zig runs on a thread of its own, not Node's. QUIC's acknowledgements
@@ -30,13 +43,17 @@ The two threads share two byte queues under one lock, each record a
 - **Commands.** Every call appends to a JS-side batch, and a microtask
   submits it: one Node-API call and one wake of the loop thread per turn,
   however many sends a broadcast makes. A buffer sent again in the same
-  batch goes as a reference to the first copy, so a broadcast crosses once.
+  batch goes as a reference to the first copy, so a broadcast crosses once;
+  it follows that a buffer refilled with other bytes within a turn must be
+  sent as a new object.
 - **Events.** The loop thread appends, and wakes JS once until JS takes
   them. Each batch is copied into an ArrayBuffer JS owns, and messages are
   views into it, valid for as long as they're kept.
 
-Past 8 MiB of events waiting for JS, stream reads pause, so QUIC flow
-control holds peers back, and datagrams are dropped.
+Past 8 MiB of events waiting for JS, stream and raw connection reads
+pause, so flow control holds peers back, and datagrams are dropped. A
+`RawSocket`'s writes wait once 256 KiB are on their way to the loop
+thread, until it has handed them to the kernel.
 
 ## Building
 
@@ -54,7 +71,9 @@ otherwise `netcode-io-<platform>-<arch>`.
 
 - Accepting a WebSocket later: upgrades are accepted on arrival, because
   quic-zig's `WsRequest` lives only for its callback.
-- Plain HTTP requests: anything that isn't an upgrade gets 404.
+- Keep-alive across kinds: once a connection carries a plain request, it's
+  JS's to its end, so a WebSocket upgrade on it reaches the `http.Server`.
+  Browsers open WebSockets on connections of their own.
 - WebSocket backpressure: past `maxSendBuffer` the socket is closed with
   1008, and reads never pause.
-- Certificates from memory instead of files; Windows; prebuilt packages.
+- Windows; prebuilt packages.

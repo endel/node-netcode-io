@@ -84,6 +84,8 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
         host.destroy();
         return throw(env, switch (err) {
             error.MissingCertificate => "options.cert and options.key are required",
+            error.BadCertificate => "options.cert holds no PEM certificate",
+            error.BadKey => "options.key holds no PEM private key: ECDSA P-256, Ed25519 or RSA",
             else => "invalid options",
         });
     };
@@ -118,11 +120,12 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
 }
 
 fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator) !quic.event_loop.Config {
+    const cert = try string(env, options, "cert", a) orelse return error.MissingCertificate;
+    const key = try string(env, options, "key", a) orelse return error.MissingCertificate;
     var config: quic.event_loop.Config = .{
         .address = try string(env, options, "host", a) orelse "0.0.0.0",
         .port = std.math.cast(u16, try uint(env, options, "port") orelse 0) orelse return error.InvalidPort,
-        .cert_path = try string(env, options, "cert", a) orelse return error.MissingCertificate,
-        .key_path = try string(env, options, "key", a) orelse return error.MissingCertificate,
+        .tls_config = try tlsConfig(a, cert, key),
     };
 
     // Always on: quic-zig wants an HTTP/1.1 listener for a handler that
@@ -141,6 +144,25 @@ fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator) !quic.ev
     }
     config.http1 = h1;
     return config;
+}
+
+/// From PEM in memory: `lib/index.js` reads any file itself.
+fn tlsConfig(a: std.mem.Allocator, cert_pem: []const u8, key_pem: []const u8) !quic.tls13.TlsConfig {
+    const tls13 = quic.tls13;
+    const chain = tls13.parsePemCertChain(a, cert_pem) catch return error.BadCertificate;
+    if (chain.len == 0) return error.BadCertificate;
+    var der_buf: [4096]u8 = undefined;
+    const der = tls13.parsePemPrivateKey(key_pem, &der_buf) catch return error.BadKey;
+    const key = tls13.extractPrivateKey(der) catch return error.BadKey;
+    var ticket_key: [16]u8 = undefined;
+    quic.sys.randomBytes(&ticket_key);
+    return .{
+        .cert_chain_der = chain,
+        .private_key_bytes = try a.dupe(u8, key.bytes),
+        .private_key_algorithm = key.algorithm,
+        .alpn = &.{"h3"},
+        .ticket_key = ticket_key,
+    };
 }
 
 fn property(env: napi.Env, obj: napi.Value, comptime name: [:0]const u8) !?napi.Value {
