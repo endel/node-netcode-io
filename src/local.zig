@@ -32,8 +32,8 @@ pub const Local = struct {
     loop: xev.Loop,
     h1: http1.Server,
     tcp: Tcp(Local),
-    /// Ids apart from the QUIC connections' counter.
-    next_id: u64 = 1 << 40,
+    /// The listener's ids, JS seeing them odd (`wire.ids`).
+    next_id: u64 = 1,
 
     /// What the loop produced since JS last heard.
     events: std.ArrayList(u8) = .empty,
@@ -301,9 +301,14 @@ pub const Local = struct {
     // `Tcp`'s sink. Delivered within the same wake, so nothing piles up
     // past what one tick reads.
 
+    pub fn fromJs(id: u64) ?u64 {
+        return wire.ids.fromLocal(id);
+    }
+
     pub fn emit(self: *Local, kind: wire.Event, header: wire.Header, parts: []const []const u8) usize {
         var h = header;
         h.kind = @backingInt(kind);
+        h.conn = wire.ids.local(h.conn);
         self.host.stats.events.add(1);
         defer if (self.pumping) self.deliverIfOld();
         if (self.pumping and self.transient and kind == .ws_message and parts.len == 1 and self.lendsRead(h, parts[0])) {
@@ -454,6 +459,7 @@ pub const Local = struct {
     pub fn emitRequest(self: *Local, kind: wire.Event, header: wire.Header, addr: wire.Address, path: []const u8, headers: anytype) void {
         var h = header;
         h.kind = @backingInt(kind);
+        h.conn = wire.ids.local(h.conn);
         self.host.stats.events.add(1);
         // after what `direct` holds
         if (self.direct_on) self.spill();
@@ -463,7 +469,9 @@ pub const Local = struct {
     pub fn emitHttpRequest(self: *Local, header: wire.Header, method: []const u8, addr: wire.Address, target: []const u8, headers: anytype, body: []const u8) void {
         self.host.stats.events.add(1);
         if (self.direct_on) self.spill();
-        wire.Request.appendHttp(gpa, &self.events, header, method, addr, target, headers, body) catch |err| log.err("dropped an event: {any}", .{err});
+        var h = header;
+        h.conn = wire.ids.local(h.conn);
+        wire.Request.appendHttp(gpa, &self.events, h, method, addr, target, headers, body) catch |err| log.err("dropped an event: {any}", .{err});
     }
 
     pub fn markPaused(self: *Local) void {
@@ -481,7 +489,11 @@ pub const Local = struct {
         defer if (!self.in_pump) self.armTimer();
         self.tcp.corkFor(batch);
         defer self.tcp.uncork();
-        var r: wire.Reader = .{ .batch = batch };
+        var r: wire.Reader = .{
+            .batch = batch,
+            .lent = if (self.lent_cap > 0) self.lent_data[0..self.lent_cap] else &.{},
+            .read = http1.sharedReadBuffer() orelse &.{},
+        };
         var n: u64 = 0;
         while (r.next()) |rec| {
             if (Tcp(Local).owns(rec.header.kind)) {
@@ -517,6 +529,8 @@ pub const Local = struct {
     }
 
     fn forwardCommand(self: *Local, r: *const wire.Reader, rec: wire.Record) !void {
+        // Lent bytes are reused before the QUIC thread would read them.
+        if (rec.header.flags & (wire.flag.lent | wire.flag.lent_read) != 0) return;
         const bytes = r.bytes(rec) orelse return;
         const key = (@as(u64, @intCast(@intFromPtr(bytes.ptr) - @intFromPtr(r.batch.ptr))) << 32) | bytes.len;
         if (rec.header.flags & wire.flag.ref != 0) {

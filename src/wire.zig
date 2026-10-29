@@ -102,6 +102,24 @@ pub const Command = enum(u8) {
     _,
 };
 
+/// Ids JS sees: the Node-thread listener's odd (2n+1), the QUIC thread's
+/// even (2n). Disjoint without an offset, they stay small integers in V8
+/// for a billion of each, where 2^40 and up was a heap number per use.
+pub const ids = struct {
+    pub fn local(raw: u64) u64 {
+        return if (raw == 0) 0 else raw << 1 | 1;
+    }
+    pub fn fromLocal(id: u64) ?u64 {
+        return if (id & 1 == 1) id >> 1 else null;
+    }
+    pub fn host(raw: u64) u64 {
+        return raw << 1;
+    }
+    pub fn fromHost(id: u64) ?u64 {
+        return if (id & 1 == 0) id >> 1 else null;
+    }
+};
+
 pub const flag = struct {
     /// ws_message, ws_send: a text message.
     pub const text: u8 = 1;
@@ -126,6 +144,12 @@ pub const flag = struct {
     /// ws_message: the payload is u32 offset, u32 length of bytes in
     /// quic-zig's read buffer (`readBuffer`), valid during this call only.
     pub const read: u8 = 16;
+    /// ws_send, raw_send on Node's thread: the payload is u32 offset, u32
+    /// length of bytes in the delivery's lent Buffer (`lent`) or in
+    /// quic-zig's read buffer (`lent_read`), still there when the batch
+    /// runs: an echo or a relay without copying the message into it.
+    pub const lent: u8 = 32;
+    pub const lent_read: u8 = 64;
 };
 
 pub const Header = struct {
@@ -178,6 +202,9 @@ pub const Record = struct {
 pub const Reader = struct {
     batch: []const u8,
     pos: usize = 0,
+    /// What `flag.lent` and `flag.lent_read` point into.
+    lent: []const u8 = &.{},
+    read: []const u8 = &.{},
 
     pub fn next(self: *Reader) ?Record {
         const rest = self.batch[self.pos..];
@@ -188,14 +215,16 @@ pub const Reader = struct {
         return .{ .header = h, .payload = rest[header_len..][0..h.len] };
     }
 
-    /// A send's bytes: its payload, or what `flag.ref` points at.
+    /// A send's bytes: its payload, or what `flag.ref`, `flag.lent` or
+    /// `flag.lent_read` points at.
     pub fn bytes(self: *const Reader, r: Record) ?[]const u8 {
-        if (r.header.flags & flag.ref == 0) return r.payload;
+        const f = r.header.flags;
+        const src = if (f & flag.ref != 0) self.batch else if (f & flag.lent != 0) self.lent else if (f & flag.lent_read != 0) self.read else return r.payload;
         if (r.payload.len != 8) return null;
         const off = std.mem.readInt(u32, r.payload[0..4], .little);
         const len = std.mem.readInt(u32, r.payload[4..8], .little);
-        if (@as(u64, off) + len > self.batch.len) return null;
-        return self.batch[off..][0..len];
+        if (@as(u64, off) + len > src.len) return null;
+        return src[off..][0..len];
     }
 };
 

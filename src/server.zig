@@ -353,9 +353,14 @@ pub const Host = struct {
     }
 
     /// Loop thread. Returns the bytes now waiting for JS.
+    pub fn fromJs(id: u64) ?u64 {
+        return wire.ids.fromHost(id);
+    }
+
     pub fn emit(self: *Host, kind: wire.Event, header: wire.Header, parts: []const []const u8) usize {
         var h = header;
         h.kind = @backingInt(kind);
+        h.conn = wire.ids.host(h.conn);
         self.stats.events.add(1);
         self.lock.lock();
         self.asleep = false;
@@ -366,6 +371,7 @@ pub const Host = struct {
     pub fn emitRequest(self: *Host, kind: wire.Event, header: wire.Header, addr: wire.Address, path: []const u8, headers: anytype) void {
         var h = header;
         h.kind = @backingInt(kind);
+        h.conn = wire.ids.host(h.conn);
         self.stats.events.add(1);
         self.lock.lock();
         self.asleep = false;
@@ -397,7 +403,9 @@ pub const Host = struct {
         self.stats.events.add(1);
         self.lock.lock();
         self.asleep = false;
-        wire.Request.appendHttp(gpa, &self.events, header, method, addr, target, headers, body) catch |err| log.err("dropped an event: {any}", .{err});
+        var h = header;
+        h.conn = wire.ids.host(h.conn);
+        wire.Request.appendHttp(gpa, &self.events, h, method, addr, target, headers, body) catch |err| log.err("dropped an event: {any}", .{err});
         _ = self.signal();
     }
 
@@ -535,7 +543,8 @@ pub const Quic = struct {
 
     /// WebSocket and raw commands do nothing here: they never reach it.
     fn runCommand(self: *Quic, r: *const wire.Reader, rec: wire.Record) void {
-        const h = rec.header;
+        var h = rec.header;
+        h.conn = Host.fromJs(h.conn) orelse return;
         switch (@as(wire.Command, @fromBackingInt(h.kind))) {
             .session_accept => {
                 var s = self.sessionOf(h.conn) orelse return;

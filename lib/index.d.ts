@@ -60,8 +60,8 @@ export declare class Request {
 }
 
 /**
- * Every callback is optional. Ids are Numbers: `ws` and `conn` come from one
- * counter, so they never collide.
+ * Every callback is optional. Ids are Numbers, small integers in practice:
+ * `ws` and `conn` never collide.
  */
 export interface Handler {
   /** The upgrade is already accepted. */

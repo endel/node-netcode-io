@@ -6,6 +6,7 @@
 //!   emitRequest(kind, header, addr, path, headers) void
 //!   emitHttpRequest(header, method, addr, target, headers, body) void
 //!   markPaused() void                         a read was paused for JS
+//!   fromJs(id) ?u64                           a command's conn, as ours, or null
 
 const std = @import("std");
 const quic = @import("quic");
@@ -73,7 +74,8 @@ pub fn Tcp(comptime Sink: type) type {
             self.batch +%= 1;
             var r: wire.Reader = .{ .batch = batch };
             while (r.next()) |rec| {
-                const h = rec.header;
+                var h = rec.header;
+                h.conn = Sink.fromJs(h.conn) orelse continue;
                 switch (@as(wire.Command, @fromBackingInt(h.kind))) {
                     .ws_send => if (self.sockets.getPtr(h.conn)) |sock| {
                         if (self.counted(&sock.sends, &sock.batch_seen) == 2) {
@@ -208,7 +210,8 @@ pub fn Tcp(comptime Sink: type) type {
 
         /// Runs a command `owns` says is ours.
         pub fn runCommand(self: *Self, r: *const wire.Reader, rec: wire.Record) void {
-            const h = rec.header;
+            var h = rec.header;
+            h.conn = Sink.fromJs(h.conn) orelse return;
             switch (@as(wire.Command, @fromBackingInt(h.kind))) {
                 .ws_send => {
                     const ws = (self.sockets.get(h.conn) orelse return).ws;
