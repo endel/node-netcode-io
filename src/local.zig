@@ -54,12 +54,9 @@ pub const Local = struct {
     direct_on: bool = false,
     /// The most a pump wanted `direct` to hold, for `lent`'s next size.
     direct_want: usize = 0,
-    /// Inside `pump`'s handle scope, before `deliver`: payloads can go
-    /// straight into Buffers of their own (`side`).
+    /// Inside `pump`'s handle scope, before `deliver`: events can go
+    /// straight into `lent` (`direct`), or lend quic-zig's read buffer.
     pumping: bool = false,
-    side: ?napi.Value = null,
-    side_len: u32 = 0,
-    side_bytes: usize = 0,
     /// A Buffer over quic-zig's read buffer, for `flag.read` messages.
     read_buf: ?napi.Ref = null,
     /// When `events`' second arrived, during `pump`.
@@ -194,11 +191,9 @@ pub const Local = struct {
         var global: napi.Value = undefined;
         _ = napi.napi_get_global(env, &global);
 
-        var side: napi.Value = undefined;
-        if (self.side) |arr| side = arr else _ = napi.napi_get_undefined(env, &side);
         const lent = if (self.transient) self.lend() else null;
         if (lent == null and !self.tcp.takes_requests) {
-            self.call(func orelse return, global, batchBuffer(env, &self.events) orelse return, side, null);
+            self.call(func orelse return, global, batchBuffer(env, &self.events) orelse return, null);
         } else {
             // What JS's answers produce lands in `events`, for the next.
             std.mem.swap(std.ArrayList(u8), &self.events, &self.delivering);
@@ -208,16 +203,13 @@ pub const Local = struct {
                 const rest = self.delivering.items[at..];
                 const n = if (self.tcp.takes_requests) cut(rest) else rest.len;
                 if (lent) |b| {
-                    self.call(func orelse return, global, b, side, .{ at, at + n });
+                    self.call(func orelse return, global, b, .{ at, at + n });
                 } else {
-                    self.call(func orelse return, global, buffer(env, rest[0..n]) orelse return, side, null);
+                    self.call(func orelse return, global, buffer(env, rest[0..n]) orelse return, null);
                 }
                 at += n;
             }
         }
-        self.side = null;
-        self.side_len = 0;
-        self.side_bytes = 0;
         if (self.paused_any) {
             self.paused_any = false;
             self.tcp.resumeReads();
@@ -237,8 +229,6 @@ pub const Local = struct {
         _ = napi.napi_get_reference_value(env, self.on_events, &func);
         var global: napi.Value = undefined;
         _ = napi.napi_get_global(env, &global);
-        var side: napi.Value = undefined;
-        _ = napi.napi_get_undefined(env, &side);
         var buf: ?napi.Value = null;
         if (napi.napi_get_reference_value(env, self.lent.?, &buf) != .ok) {
             // Delivered through `events` instead.
@@ -248,7 +238,7 @@ pub const Local = struct {
         var at: usize = 0;
         while (at < n) {
             const len = if (self.tcp.takes_requests) cut(self.lent_data[at..n]) else n - at;
-            self.call(func orelse return, global, buf.?, side, .{ at, at + len });
+            self.call(func orelse return, global, buf.?, .{ at, at + len });
             at += len;
         }
         if (self.paused_any) {
@@ -260,8 +250,7 @@ pub const Local = struct {
     /// Mid-`pump`, from inside a socket's callback: what JS answers goes out
     /// while the loop still has sockets to read, as uWebSockets.js answers
     /// each in turn. Not pumping meanwhile: events JS's commands produce
-    /// wait in `events`, and none goes `side`, whose Buffers would die with
-    /// the commands' handle scope.
+    /// wait in `events`, not in `lent`, which JS is reading.
     fn deliverEarly(self: *Local) void {
         self.pumping = false;
         defer self.pumping = true;
@@ -272,14 +261,14 @@ pub const Local = struct {
     /// Microtasks run on the way out: the batch JS answers with arrives in
     /// `submit` before this returns. `range`: the part of `batch` this call
     /// is for, when it's `lent`'s.
-    fn call(self: *Local, func: napi.Value, global: napi.Value, batch: napi.Value, side: napi.Value, range: ?[2]usize) void {
-        var argv: [4]napi.Value = .{ batch, side, undefined, undefined };
-        var argc: usize = 2;
+    fn call(self: *Local, func: napi.Value, global: napi.Value, batch: napi.Value, range: ?[2]usize) void {
+        var argv: [3]napi.Value = .{ batch, undefined, undefined };
+        var argc: usize = 1;
         if (range) |r| {
             // below max_lent
-            _ = napi.napi_create_uint32(self.env, @intCast(r[0]), &argv[2]);
-            _ = napi.napi_create_uint32(self.env, @intCast(r[1]), &argv[3]);
-            argc = 4;
+            _ = napi.napi_create_uint32(self.env, @intCast(r[0]), &argv[1]);
+            _ = napi.napi_create_uint32(self.env, @intCast(r[1]), &argv[2]);
+            argc = 3;
         }
         if (napi.napi_make_callback(self.env, self.async_ctx, global, func, argc, &argv, null) == .pending_exception) {
             var err: napi.Value = undefined;
@@ -314,15 +303,12 @@ pub const Local = struct {
         if (self.pumping and self.transient and kind == .ws_message and parts.len == 1 and self.lendsRead(h, parts[0])) {
             // Taken before the loop's next read reuses the buffer.
             self.deliverEarly();
-        } else if (self.pumping and !self.transient and (kind == .ws_message or kind == .raw_data) and self.toSide(parts)) {
-            h.flags |= wire.flag.side;
-            wire.append(gpa, &self.events, h, &.{}) catch |err| log.err("dropped an event: {any}", .{err});
         } else {
             var n: usize = wire.header_len;
             for (parts) |p| n += p.len;
             wire.append(gpa, self.out(n), h, parts) catch |err| log.err("dropped an event: {any}", .{err});
         }
-        return self.events.items.len + self.direct.items.len + self.side_bytes;
+        return self.events.items.len + self.direct.items.len;
     }
 
     /// A large message quic-zig parsed in place goes to JS as a view of its
@@ -427,32 +413,6 @@ pub const Local = struct {
         self.lent = held;
         self.lent_data = @ptrCast(data.?);
         self.lent_cap = cap;
-        return true;
-    }
-
-    /// A large payload copied once, into a Buffer of its own, instead of
-    /// twice through the batch: a batch of large messages outgrew malloc's
-    /// heap, so each came as fresh pages.
-    fn toSide(self: *Local, parts: []const []const u8) bool {
-        var total: usize = 0;
-        for (parts) |p| total += p.len;
-        if (total < side_min) return false;
-        if (self.side == null) {
-            var arr: napi.Value = undefined;
-            if (napi.napi_create_array(self.env, &arr) != .ok) return false;
-            self.side = arr;
-        }
-        var data: ?*anyopaque = null;
-        var buf: napi.Value = undefined;
-        if (napi.napi_create_buffer(self.env, total, &data, &buf) != .ok) return false;
-        var at: usize = 0;
-        for (parts) |p| {
-            @memcpy(@as([*]u8, @ptrCast(data.?))[at..][0..p.len], p);
-            at += p.len;
-        }
-        if (napi.napi_set_element(self.env, self.side.?, self.side_len, buf) != .ok) return false;
-        self.side_len += 1;
-        self.side_bytes += total;
         return true;
     }
 
@@ -587,18 +547,6 @@ pub const Local = struct {
     }
 };
 
-/// `list`'s bytes copied into a Buffer JS owns, leaving `list` empty with
-/// its capacity. (Handing JS the list's own memory instead, as an external
-/// ArrayBuffer, cost more than the copy: fresh pages, a finalizer each, and
-/// V8 collecting sooner for the external memory.)
-/// Where a delivery starting at `events` ends: past its first HTTP request.
-/// Each request gets a call of its own, so the microtasks one starts run
-/// before the next is handled, as between Node's 'request' events: two
-/// matchmaking requests in one call would both see the same free seats.
-/// Payloads from here on go into `side` Buffers: below, the copy into the
-/// batch is cheaper than a Buffer of their own.
-const side_min = 32 * 1024;
-
 /// How long events wait during a pump while more sockets are read: the
 /// first replies go out without waiting for the last reads.
 const deliver_after_ns = 20 * std.time.ns_per_us;
@@ -612,6 +560,10 @@ const read_lend_min = 32 * 1024;
 /// The most a `lent` Buffer grows to.
 const max_lent = 4 * 1024 * 1024;
 
+/// Where a delivery starting at `events` ends: past its first HTTP request.
+/// Each request gets a call of its own, so the microtasks one starts run
+/// before the next is handled, as between Node's 'request' events: two
+/// matchmaking requests in one call would both see the same free seats.
 pub fn cut(events: []const u8) usize {
     var at: usize = 0;
     while (at + wire.header_len <= events.len) {
@@ -622,6 +574,11 @@ pub fn cut(events: []const u8) usize {
     return events.len;
 }
 
+/// `list`'s bytes copied into a Buffer JS owns, leaving `list` empty with
+/// its capacity. (Handing JS the list's own memory instead, as an external
+/// ArrayBuffer, cost more than the copy: fresh pages, a finalizer each, and
+/// V8 collecting sooner for the external memory. So did a Buffer of its own
+/// for each large message.)
 pub fn batchBuffer(env: napi.Env, list: *std.ArrayList(u8)) ?napi.Value {
     defer list.clearRetainingCapacity();
     return buffer(env, list.items);

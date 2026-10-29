@@ -76,8 +76,6 @@ pub extern fn napi_get_value_bool(env: Env, value: Value, result: *bool) Status;
 pub extern fn napi_get_value_string_utf8(env: Env, value: Value, buf: ?[*]u8, bufsize: usize, result: ?*usize) Status;
 pub extern fn napi_get_typedarray_info(env: Env, value: Value, kind: ?*c_int, length: ?*usize, data: ?*?*anyopaque, arraybuffer: ?*Value, byte_offset: ?*usize) Status;
 pub extern fn napi_is_typedarray(env: Env, value: Value, result: *bool) Status;
-pub extern fn napi_create_array(env: Env, result: *Value) Status;
-pub extern fn napi_set_element(env: Env, object: Value, index: u32, value: Value) Status;
 pub extern fn napi_create_arraybuffer(env: Env, len: usize, data: *?*anyopaque, result: *Value) Status;
 pub extern fn napi_create_buffer(env: Env, len: usize, data: *?*anyopaque, result: *Value) Status;
 pub extern fn napi_create_uint32(env: Env, value: u32, result: *Value) Status;

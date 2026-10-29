@@ -225,26 +225,6 @@ test('a buffer sent twice still arrives right when its turn spans several batche
   await server.stop();
 });
 
-test('a delivery split in calls reads its side payloads in order across them', async (t) => {
-  const got = [];
-  const server = new Server(options, { onWsMessage(ws, data) { got.push([ws, data.toString()]); } });
-  t.after(() => server.stop());
-  // ws_message, flagged side: the payload is the next Buffer in `side`
-  const record = (conn) => {
-    const r = Buffer.alloc(24);
-    r[0] = 2;
-    r[1] = 8;
-    r.writeUInt32LE(conn, 8);
-    return r;
-  };
-  const side = [Buffer.from('first'), Buffer.from('second'), Buffer.from('third')];
-  server._onEvents(Buffer.concat([record(1), record(2)]), side);
-  server._onEvents(record(3), side);
-  assert.deepStrictEqual(got, [[1, 'first'], [2, 'second'], [3, 'third']]);
-  assert.strictEqual(side.length, 0, 'kept no longer than its messages');
-  await server.stop();
-});
-
 test('transientMessages: each message is whole during its call; what JS reads later is a copy', async (t) => {
   const sizes = [10, 200, 70 * 1024, 5, 300 * 1024, 1];
   const copies = [];
