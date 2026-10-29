@@ -2,3 +2,5 @@
 zig-out/
 zig-pkg/
 node_modules/
+bench/wsload/wsload
+bench/netcode-*/

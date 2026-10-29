@@ -11,6 +11,7 @@
 //! them, where TCP's run in the kernel regardless.
 
 const std = @import("std");
+const builtin = @import("builtin");
 const quic = @import("quic");
 const event_loop = quic.event_loop;
 const xev = event_loop.Xev;
@@ -26,6 +27,33 @@ const log = std.log.scoped(.netcode_io);
 const max_pending_events = 8 << 20;
 
 pub const Server = event_loop.Server(Handler);
+
+/// What crossed between the threads, and how often each woke the other:
+/// for tuning. Never reset.
+pub const Stats = struct {
+    // Loop thread's.
+    events: Counter = .{},
+    /// JS woken.
+    notifies: Counter = .{},
+    /// Woken by JS.
+    wakes: Counter = .{},
+    commands: Counter = .{},
+    // JS thread's.
+    delivers: u64 = 0,
+    event_bytes: u64 = 0,
+    submits: u64 = 0,
+    command_bytes: u64 = 0,
+
+    const Counter = struct {
+        v: std.atomic.Value(u64) = .init(0),
+        fn add(self: *Counter, n: u64) void {
+            _ = self.v.fetchAdd(n, .monotonic);
+        }
+        pub fn get(self: *const Counter) u64 {
+            return self.v.load(.monotonic);
+        }
+    };
+};
 
 pub const Host = struct {
     /// Strings the config borrows.
@@ -61,6 +89,8 @@ pub const Host = struct {
     running_ends: std.ArrayList(usize) = .empty,
     /// The JS thread's: the event batch being handed over.
     taken: std.ArrayList(u8) = .empty,
+
+    stats: Stats = .{},
 
     pub fn create() !*Host {
         const self = try gpa.create(Host);
@@ -104,7 +134,15 @@ pub const Host = struct {
         return self.server.port();
     }
 
+    /// Any thread. CPU the loop thread has used, in nanoseconds; null when
+    /// the platform won't say.
+    pub fn loopCpuNs(self: *const Host) ?u64 {
+        if (!self.started) return null;
+        return threadCpuNs(self.thread.getHandle());
+    }
+
     fn run(self: *Host) void {
+        nameThread("netcode-io");
         self.server.start();
         self.wake.wait(self.server.eventLoop(), &self.wake_c, Host, self, onWake);
         self.server.eventLoop().run(.until_done) catch |err| log.err("event loop: {any}", .{err});
@@ -115,6 +153,8 @@ pub const Host = struct {
 
     /// JS thread. Copies `batch` into the command queue.
     pub fn submit(self: *Host, batch: []const u8) !void {
+        self.stats.submits += 1;
+        self.stats.command_bytes += batch.len;
         self.lock.lock();
         const was = self.commands_pending;
         self.command_ends.ensureUnusedCapacity(gpa, 1) catch |err| {
@@ -137,6 +177,10 @@ pub const Host = struct {
         self.lock.lock();
         std.mem.swap(std.ArrayList(u8), &self.taken, &self.events);
         self.events_pending = false;
+        if (self.taken.items.len > 0) {
+            self.stats.delivers += 1;
+            self.stats.event_bytes += self.taken.items.len;
+        }
         const wake = self.paused_any and !self.resume_wanted;
         if (wake) self.resume_wanted = true;
         self.lock.unlock();
@@ -173,6 +217,7 @@ pub const Host = struct {
     fn onWake(self_opt: ?*Host, _: *xev.Loop, _: *xev.Completion, r: xev.Async.WaitError!void) xev.CallbackAction {
         const self = self_opt.?;
         _ = r catch return .rearm;
+        self.stats.wakes.add(1);
         self.lock.lock();
         std.mem.swap(std.ArrayList(u8), &self.running, &self.commands);
         std.mem.swap(std.ArrayList(usize), &self.running_ends, &self.command_ends);
@@ -203,6 +248,7 @@ pub const Host = struct {
     fn emit(self: *Host, kind: wire.Event, header: wire.Header, parts: []const []const u8) usize {
         var h = header;
         h.kind = @backingInt(kind);
+        self.stats.events.add(1);
         self.lock.lock();
         wire.append(gpa, &self.events, h, parts) catch |err| log.err("dropped an event: {any}", .{err});
         return self.signal();
@@ -211,6 +257,7 @@ pub const Host = struct {
     fn emitRequest(self: *Host, kind: wire.Event, header: wire.Header, addr: wire.Address, path: []const u8, headers: anytype) void {
         var h = header;
         h.kind = @backingInt(kind);
+        self.stats.events.add(1);
         self.lock.lock();
         wire.Request.append(gpa, &self.events, h, addr, path, headers) catch |err| log.err("dropped an event: {any}", .{err});
         _ = self.signal();
@@ -222,7 +269,10 @@ pub const Host = struct {
         self.events_pending = true;
         const waiting = self.events.items.len;
         self.lock.unlock();
-        if (!was) self.notify(self.notify_ctx);
+        if (!was) {
+            self.stats.notifies.add(1);
+            self.notify(self.notify_ctx);
+        }
         return waiting;
     }
 
@@ -425,7 +475,9 @@ const Handler = struct {
 
     fn runBatch(self: *Handler, batch: []const u8) void {
         var r: wire.Reader = .{ .batch = batch };
-        while (r.next()) |rec| self.runCommand(&r, rec);
+        var n: u64 = 0;
+        while (r.next()) |rec| : (n += 1) self.runCommand(&r, rec);
+        self.host.stats.commands.add(n);
     }
 
     fn runCommand(self: *Handler, r: *const wire.Reader, rec: wire.Record) void {
@@ -521,6 +573,42 @@ const Handler = struct {
         }
     }
 };
+
+fn threadCpuNs(t: std.Thread.Handle) ?u64 {
+    switch (builtin.os.tag) {
+        .macos => {
+            const darwin = std.c;
+            var info: darwin.thread_basic_info = undefined;
+            var count: darwin.mach_msg_type_number_t = darwin.THREAD.BASIC.INFO_COUNT;
+            if (darwin.thread_info(pthread_mach_thread_np(t), darwin.THREAD.BASIC.INFO, @ptrCast(&info), &count) != 0) return null;
+            const us = (@as(u64, @intCast(info.user_time.seconds)) + @as(u64, @intCast(info.system_time.seconds))) * std.time.us_per_s +
+                @as(u64, @intCast(info.user_time.microseconds)) + @as(u64, @intCast(info.system_time.microseconds));
+            return us * std.time.ns_per_us;
+        },
+        .linux => {
+            var clock: c_int = undefined;
+            if (pthread_getcpuclockid(t, &clock) != 0) return null;
+            var ts: std.os.linux.timespec = undefined;
+            // the raw syscall: std's clockid_t can't hold a thread's clock
+            if (std.os.linux.errno(std.os.linux.syscall2(.clock_gettime, @as(usize, @bitCast(@as(isize, clock))), @intFromPtr(&ts))) != .SUCCESS) return null;
+            return @as(u64, @intCast(ts.sec)) * std.time.ns_per_s + @as(u64, @intCast(ts.nsec));
+        },
+        else => return null,
+    }
+}
+
+extern "c" fn pthread_mach_thread_np(std.Thread.Handle) std.c.mach_port_t;
+extern "c" fn pthread_getcpuclockid(std.Thread.Handle, *c_int) c_int;
+extern "c" fn pthread_setname_np(name: [*:0]const u8) c_int; // Darwin's: names the calling thread
+
+/// So profilers and `top -H` tell it from Node's own threads.
+fn nameThread(comptime name: [:0]const u8) void {
+    switch (builtin.os.tag) {
+        .macos => _ = pthread_setname_np(name.ptr),
+        .linux => _ = std.os.linux.prctl(@intFromEnum(std.os.linux.PR.SET_NAME), @intFromPtr(name.ptr), 0, 0, 0),
+        else => {},
+    }
+}
 
 /// A lock held for an append or a swap at most: std keeps its mutex behind
 /// `Io`.

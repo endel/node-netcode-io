@@ -5,6 +5,7 @@
 //!   submit(handle, Uint8Array)            queues a command batch
 //!   port(handle) -> number                the bound UDP port
 //!   ref(handle, bool)                     whether the server keeps Node alive
+//!   stats(handle) -> object               counters, for tuning
 //!   destroy(handle)                       frees it, after the `stopped` event
 //!
 //! `onEvents(ArrayBuffer)` gets every event batch, through a threadsafe
@@ -34,6 +35,7 @@ export fn napi_register_module_v1(env: napi.Env, exports: napi.Value) callconv(.
     define(env, exports, "submit", jsSubmit) catch return null;
     define(env, exports, "port", jsPort) catch return null;
     define(env, exports, "ref", jsRef) catch return null;
+    define(env, exports, "stats", jsStats) catch return null;
     define(env, exports, "destroy", jsDestroy) catch return null;
     return exports;
 }
@@ -288,6 +290,34 @@ fn jsRef(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     if (argv[1]) |v| _ = napi.napi_get_value_bool(env, v, &keep);
     _ = if (keep) napi.napi_ref_threadsafe_function(env, b.tsfn) else napi.napi_unref_threadsafe_function(env, b.tsfn);
     return null;
+}
+
+fn jsStats(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
+    const argv = args(env, info, 1);
+    const b = bindingOf(env, argv[0]) orelse return throw(env, "stats: not a server handle");
+    const host = b.host orelse return null;
+    const st = &host.stats;
+    var obj: napi.Value = undefined;
+    if (napi.napi_create_object(env, &obj) != .ok) return null;
+    const fields = .{
+        .{ "events", st.events.get() },
+        .{ "notifies", st.notifies.get() },
+        .{ "wakes", st.wakes.get() },
+        .{ "commands", st.commands.get() },
+        .{ "delivers", st.delivers },
+        .{ "eventBytes", st.event_bytes },
+        .{ "submits", st.submits },
+        .{ "commandBytes", st.command_bytes },
+    };
+    inline for (fields) |f| setNumber(env, obj, f[0], @floatFromInt(f[1]));
+    if (host.loopCpuNs()) |ns| setNumber(env, obj, "loopCpu", @as(f64, @floatFromInt(ns)) / std.time.ns_per_s);
+    return obj;
+}
+
+fn setNumber(env: napi.Env, obj: napi.Value, comptime name: [:0]const u8, x: f64) void {
+    var v: napi.Value = undefined;
+    if (napi.napi_create_double(env, x, &v) != .ok) return;
+    _ = napi.napi_set_named_property(env, obj, name.ptr, v);
 }
 
 fn jsDestroy(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {

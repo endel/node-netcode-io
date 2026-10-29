@@ -164,4 +164,30 @@ export declare class Server {
   stop(): Promise<void>;
   ref(): this;
   unref(): this;
+  /** Counters for tuning, since the server started; undefined once stopped. */
+  stats(): Stats | undefined;
+}
+
+/**
+ * What crossed between the threads. Events per delivery and commands per
+ * submit are the batch sizes; notifies and wakes per message say how often
+ * a thread was woken for the other's work.
+ */
+export interface Stats {
+  /** Events the loop thread queued for JS. */
+  events: number;
+  /** Times the loop thread woke JS. */
+  notifies: number;
+  /** Times JS woke the loop thread. */
+  wakes: number;
+  /** Commands the loop thread ran. */
+  commands: number;
+  /** Event batches JS took, and their bytes. */
+  delivers: number;
+  eventBytes: number;
+  /** Command batches JS submitted, and their bytes. */
+  submits: number;
+  commandBytes: number;
+  /** CPU seconds the loop thread used; absent where the platform won't say. */
+  loopCpu?: number;
 }
