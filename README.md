@@ -31,29 +31,74 @@ connection over as bytes, TLS already removed, from its first request on.
 `serveHttp` wraps each in a `net.Socket`-shaped `RawSocket` for the
 `http.Server`'s 'connection' event; the server is never `listen()`ed.
 
+Requests a hot path should answer without Node's HTTP stack, matchmaking
+say, can be taken first: quic-zig offers each one, head and body parsed,
+and what `onHttpRequest` passes goes on to the `http.Server`, bytes
+untouched.
+
+```js
+const server = new Server(options, {
+  onHttpRequest(id, req) {
+    if (req.path !== '/match') { return server.passRequest(id); }
+    server.respond(id, 200, { 'content-type': 'application/json' }, JSON.stringify(match(req.body)));
+  },
+}).serveHttp(http.createServer(app));
+```
+
 ## How it runs
 
-quic-zig runs on a thread of its own, not Node's. QUIC's acknowledgements
-and loss timers live in userspace, so a room tick or a GC pause on the JS
-thread would hold them up; TCP's run in the kernel regardless.
+QUIC runs on a thread of its own, not Node's. Its acknowledgements and loss
+timers live in userspace, so a room tick or a GC pause on the JS thread
+would hold them up; TCP's run in the kernel regardless.
 
-The two threads share two byte queues under one lock, each record a
-24-byte header and a payload (`src/wire.zig`, mirrored in `lib/index.js`):
+WebSockets and plain HTTP run on Node's thread by default, as with `ws` or
+uWebSockets.js. quic-zig's listener runs on a libxev loop of its own whose
+kqueue or epoll fd libuv polls, so Node wakes for it as for one of its own
+sockets. Each wake reads the sockets that are ready and hands JS what came
+of it in one call, where uWebSockets.js calls JS once per message; a wake
+with more to read hands over what is 20 µs old and reads on. The commands
+JS answers with are written to the sockets before the call returns. On
+Linux, Colyseus rooms of echo, broadcast, state sync and events cost
+0.6–1.0× the CPU they take on uWebSockets.js, and joins as much.
+
+`websocket: { thread: 'quic' }` serves them beside QUIC instead. The socket
+work then leaves Node's event loop, which spent a fifth to two-thirds of the
+time it does with uWebSockets.js in the same rooms, at 0.9–1.4× the CPU of
+Node's thread for the hop between threads: for a process whose event loop is
+the limit, with cores to spare.
+
+Between threads, JS and the loop share two byte queues under one lock,
+each record a 24-byte header and a payload (`src/wire.zig`, mirrored in
+`lib/index.js`). Node's thread uses the same records, without the queues:
 
 - **Commands.** Every call appends to a JS-side batch, and a microtask
-  submits it: one Node-API call and one wake of the loop thread per turn,
-  however many sends a broadcast makes. A buffer sent again in the same
-  batch goes as a reference to the first copy, so a broadcast crosses once;
-  it follows that a buffer refilled with other bytes within a turn must be
-  sent as a new object.
+  submits it: one Node-API call, and at most one wake of the loop thread,
+  per turn, however many sends a broadcast makes. On Node's thread a long
+  delivery also submits between events, once its batch is 50 µs old, so the
+  first replies don't wait for the last events to be handled. A buffer sent
+  again in the same batch goes as a reference to the first copy, so a broadcast
+  crosses once; it follows that a buffer refilled with other bytes within a
+  turn must be sent as a new object. Messages a batch has for one socket
+  leave in one send, so a client that gets a patch and two broadcasts in
+  one tick costs one syscall and one TCP segment rather than three.
 - **Events.** The loop thread appends, and wakes JS once until JS takes
-  them. Each batch is copied into an ArrayBuffer JS owns, and messages are
-  views into it, valid for as long as they're kept.
+  them, at the end of its tick. Each batch is copied into a Buffer JS
+  owns, and messages are views into it, valid for as long as they're kept.
+  On Node's thread a message of 32 KiB or more is copied once, straight
+  into a Buffer of its own, instead. With `websocket.transientMessages`,
+  events are written straight into one Buffer reused for every batch, as
+  uWebSockets.js lends its messages: a message is valid only during its
+  `onWsMessage` call, copied once on its way in, and nothing is allocated
+  per delivery for the garbage collector to reclaim. Each `onHttpRequest` request ends a call
+  into JS, so the microtasks it starts run before the next one, as
+  between an `http.Server`'s 'request' events.
 
 Past 8 MiB of events waiting for JS, stream and raw connection reads
 pause, so flow control holds peers back, and datagrams are dropped. A
-`RawSocket`'s writes wait once 256 KiB are on their way to the loop
-thread, until it has handed them to the kernel.
+`RawSocket`'s writes wait once 256 KiB are on their way to the kernel.
+
+`server.stats()` counts what crossed and how often each thread woke the
+other; `bench/` compares both modes with uWebSockets.js.
 
 ## Building
 
@@ -61,7 +106,7 @@ Zig 0.17, with quic-zig checked out beside this repo (`../quic-zig`):
 
 ```sh
 zig build            # zig-out/lib/netcode_io.node, zig-out/bin/wt-test-client
-npm test             # Zig wire tests, then node --test
+npm test             # Zig wire tests, then node --test with each websocket.thread
 ```
 
 `lib/binding.js` loads `zig-out/lib/netcode_io.node` when it exists, and
@@ -71,9 +116,10 @@ otherwise `netcode-io-<platform>-<arch>`.
 
 - Accepting a WebSocket later: upgrades are accepted on arrival, because
   quic-zig's `WsRequest` lives only for its callback.
-- Keep-alive across kinds: once a connection carries a plain request, it's
-  JS's to its end, so a WebSocket upgrade on it reaches the `http.Server`.
-  Browsers open WebSockets on connections of their own.
+- Keep-alive across kinds: once a connection carries a request for the
+  `http.Server`, it's that server's to its end, so a WebSocket upgrade or a
+  request `onHttpRequest` would take on it goes there too. Browsers open
+  WebSockets on connections of their own.
 - WebSocket backpressure: past `maxSendBuffer` the socket is closed with
   1008, and reads never pause.
 - Windows; prebuilt packages.

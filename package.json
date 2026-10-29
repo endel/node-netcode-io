@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "zig build -Doptimize=ReleaseFast",
-    "test": "zig build test && node --test --test-timeout=20000 test/*.test.js"
+    "test": "zig build test && node --test --test-timeout=20000 test/*.test.js && NETCODE_IO_THREAD=quic node --test --test-timeout=20000 test/*.test.js"
   },
   "engines": {
     "node": ">=18"

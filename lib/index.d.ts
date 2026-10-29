@@ -21,11 +21,33 @@ export interface ServerOptions {
     maxSendBuffer?: number;
     /** Ping a quiet connection this often (ms), and drop it after two intervals. 0 disables. Default 30000. */
     pingInterval?: number;
+    /**
+     * The thread WebSockets and plain HTTP are served on. QUIC always has
+     * a thread of its own.
+     *
+     * - `'node'` (default): Node's, as `ws` and uWebSockets.js do. No hop
+     *   between threads, so the least CPU and latency.
+     * - `'quic'`: QUIC's. The socket work leaves Node's event loop, which
+     *   then has more room for your code, at more CPU overall: for a
+     *   process whose event loop is the limit, with cores to spare.
+     */
+    thread?: 'node' | 'quic';
+    /**
+     * `onWsMessage`'s `data` is valid only during the call, as
+     * uWebSockets.js's is: its memory is reused for later messages, so
+     * copy what you keep. Spares an allocation per delivery, and the
+     * garbage collection it costs. Only with `thread: 'node'`; otherwise
+     * messages are kept anyway. Default false.
+     */
+    transientMessages?: boolean;
   };
 }
 
-/** A WebSocket upgrade or a WebTransport CONNECT, as the peer sent it. */
+/** A WebSocket upgrade, a WebTransport CONNECT, or an `onHttpRequest` request, as the peer sent it. */
 export declare class Request {
+  /** `onHttpRequest`'s: the method, and the whole body. */
+  readonly method: string | undefined;
+  readonly body: Buffer | undefined;
   /** The request target: path and query. */
   readonly path: string;
   /** In arrival order; a name may repeat. WebTransport's include pseudo-headers (":authority"). */
@@ -44,7 +66,8 @@ export declare class Request {
 export interface Handler {
   /** The upgrade is already accepted. */
   onWsOpen?(ws: number, request: Request): void;
-  /** `data` stays valid for as long as it's kept. */
+
+  /** `data` stays valid for as long as it's kept, unless `websocket.transientMessages`. */
   onWsMessage?(ws: number, data: Buffer, isText: boolean): void;
   /** The socket's last event. */
   onWsClose?(ws: number, code: number, reason: string): void;
@@ -80,6 +103,19 @@ export interface Handler {
    * client may half-close after its request.
    */
   onRawEnd?(raw: number): void;
+
+  /**
+   * An HTTP/1.1 request that isn't an upgrade, head and body whole (bodies
+   * up to 64 KiB; larger or chunked ones skip this). Answer with
+   * `respond`, now or later, or `passRequest` to have `serveHttp`'s server
+   * take it. Nothing more is read from its connection until then. Without
+   * this callback every request goes to that server.
+   *
+   * Each request comes in a call of its own, so microtasks it starts run
+   * before the next request, as between an `http.Server`'s 'request'
+   * events.
+   */
+  onHttpRequest?(request: number, req: Request): void;
 }
 
 export interface RawAddress {
@@ -153,6 +189,14 @@ export declare class Server {
    * has `onRawOpen`. Without either, each request gets a 404.
    */
   serveHttp(httpServer: HttpServer): this;
+  /**
+   * Answers an `onHttpRequest` request. Content-Length is added; a header
+   * name or value with CR or LF throws.
+   */
+  respond(request: number, status: number, headers?: Record<string, string> | Iterable<[string, string]>, body?: Bytes | string): void;
+  /** Hands an `onHttpRequest` request to `serveHttp`'s server, as if never taken. */
+  passRequest(request: number): void;
+
   /** `drain`: answer with `onRawDrain` once the output is low again. */
   sendRaw(raw: number, data: Bytes, drain?: boolean): void;
   /** What was sent goes out first, unless `abort`: then it's dropped, as `destroy()` does. */

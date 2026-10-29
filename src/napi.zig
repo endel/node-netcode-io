@@ -7,6 +7,9 @@ pub const Env = *opaque {};
 pub const Value = *opaque {};
 pub const CallbackInfo = *opaque {};
 pub const ThreadsafeFunction = *opaque {};
+pub const Ref = *opaque {};
+pub const HandleScope = *opaque {};
+pub const AsyncContext = *opaque {};
 
 pub const Status = enum(c_int) {
     ok,
@@ -68,11 +71,15 @@ pub extern fn napi_has_named_property(env: Env, object: Value, name: [*:0]const 
 pub extern fn napi_get_cb_info(env: Env, info: CallbackInfo, argc: *usize, argv: [*]Value, this: ?*Value, data: ?*?*anyopaque) Status;
 pub extern fn napi_typeof(env: Env, value: Value, result: *ValueType) Status;
 pub extern fn napi_get_value_uint32(env: Env, value: Value, result: *u32) Status;
+pub extern fn napi_get_value_int64(env: Env, value: Value, result: *i64) Status;
 pub extern fn napi_get_value_bool(env: Env, value: Value, result: *bool) Status;
 pub extern fn napi_get_value_string_utf8(env: Env, value: Value, buf: ?[*]u8, bufsize: usize, result: ?*usize) Status;
 pub extern fn napi_get_typedarray_info(env: Env, value: Value, kind: ?*c_int, length: ?*usize, data: ?*?*anyopaque, arraybuffer: ?*Value, byte_offset: ?*usize) Status;
 pub extern fn napi_is_typedarray(env: Env, value: Value, result: *bool) Status;
+pub extern fn napi_create_array(env: Env, result: *Value) Status;
+pub extern fn napi_set_element(env: Env, object: Value, index: u32, value: Value) Status;
 pub extern fn napi_create_arraybuffer(env: Env, len: usize, data: *?*anyopaque, result: *Value) Status;
+pub extern fn napi_create_buffer(env: Env, len: usize, data: *?*anyopaque, result: *Value) Status;
 pub extern fn napi_create_uint32(env: Env, value: u32, result: *Value) Status;
 pub extern fn napi_create_double(env: Env, value: f64, result: *Value) Status;
 pub extern fn napi_create_object(env: Env, result: *Value) Status;
@@ -101,5 +108,17 @@ pub extern fn napi_call_threadsafe_function(func: ThreadsafeFunction, data: ?*an
 pub extern fn napi_release_threadsafe_function(func: ThreadsafeFunction, mode: TsfnReleaseMode) Status;
 pub extern fn napi_ref_threadsafe_function(env: Env, func: ThreadsafeFunction) Status;
 pub extern fn napi_unref_threadsafe_function(env: Env, func: ThreadsafeFunction) Status;
+pub extern fn napi_get_global(env: Env, result: *Value) Status;
+pub extern fn napi_create_reference(env: Env, value: Value, initial_refcount: u32, result: *Ref) Status;
+pub extern fn napi_delete_reference(env: Env, ref: Ref) Status;
+pub extern fn napi_get_reference_value(env: Env, ref: Ref, result: *?Value) Status;
+pub extern fn napi_open_handle_scope(env: Env, result: *HandleScope) Status;
+pub extern fn napi_close_handle_scope(env: Env, scope: HandleScope) Status;
+pub extern fn napi_async_init(env: Env, async_resource: ?Value, async_resource_name: Value, result: *AsyncContext) Status;
+pub extern fn napi_async_destroy(env: Env, async_context: AsyncContext) Status;
+pub extern fn napi_make_callback(env: Env, async_context: ?AsyncContext, recv: Value, func: Value, argc: usize, argv: [*]const Value, result: ?*Value) Status;
+pub extern fn napi_get_and_clear_last_exception(env: Env, result: *Value) Status;
+pub extern fn napi_fatal_exception(env: Env, err: Value) Status;
+pub extern fn napi_get_uv_event_loop(env: Env, loop: **anyopaque) Status;
 
 const std = @import("std");

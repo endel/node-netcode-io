@@ -4,6 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 const { Server } = require('..');
+const { thread } = require('./thread.js');
 
 const certs = path.join(__dirname, 'certs');
 const options = {
@@ -11,7 +12,7 @@ const options = {
   port: 0,
   cert: path.join(certs, 'server.crt'),
   key: path.join(certs, 'server.key'),
-  websocket: { tls: false },
+  websocket: { tls: false, thread },
 };
 
 function open(url) {
@@ -49,6 +50,82 @@ test('echoes binary and text, and reports the request', async (t) => {
 
   ws.close();
   await server.stop();
+});
+
+test('websocket.thread picks the thread WebSockets are served on', async (t) => {
+  const server = new Server(options, {
+    onWsMessage(id, data) { server.send(id, data); },
+  });
+  t.after(() => server.stop());
+
+  const ws = await open(`ws://127.0.0.1:${server.port}/`);
+  ws.send(new Uint8Array([7]));
+  await next(ws);
+  // only the QUIC thread ever wakes JS: on Node's, the echo never crossed
+  const { notifies } = server.stats();
+  if (thread === 'node') {
+    assert.strictEqual(notifies, 0);
+  } else {
+    assert.ok(notifies > 0);
+  }
+
+  ws.close();
+  await server.stop();
+});
+
+test('messages to one socket in one turn arrive whole and in order, a large one among them', async (t) => {
+  // They leave corked in one send; the large one makes the kernel take only part.
+  const sizes = [10, 200, 300 * 1024, 5, 70 * 1024, 1];
+  const server = new Server({ ...options, websocket: { ...options.websocket, maxSendBuffer: 8 << 20 } }, {
+    onWsMessage(id) {
+      sizes.forEach((n, i) => server.send(id, new Uint8Array(n).fill(i + 1)));
+    },
+  });
+  t.after(() => server.stop());
+
+  const ws = await open(`ws://127.0.0.1:${server.port}/`);
+  const got = [];
+  const all = new Promise((resolve) => {
+    ws.onmessage = (e) => { got.push(new Uint8Array(e.data)); if (got.length === sizes.length) { resolve(); } };
+  });
+  ws.send('go');
+  await all;
+  got.forEach((m, i) => {
+    assert.strictEqual(m.length, sizes[i]);
+    assert.ok(m.every((b) => b === i + 1), `message ${i}`);
+  });
+
+  ws.close();
+  await server.stop();
+});
+
+test('a large message stays whole while kept, through the batches after it', async (t) => {
+  // big enough that its batch reaches JS as that batch's own memory
+  const kept = [];
+  let resolveAll;
+  const all = new Promise((resolve) => { resolveAll = resolve; });
+  const server = new Server({ ...options, websocket: { ...options.websocket, maxMessageSize: 1 << 20 } }, {
+    onWsMessage(id, data) {
+      kept.push(data);
+      if (kept.length === 12) { resolveAll(); }
+    },
+  });
+  t.after(() => server.stop());
+
+  const ws = await open(`ws://127.0.0.1:${server.port}/`);
+  for (let i = 0; i < 12; i++) { ws.send(new Uint8Array(100 * 1024).fill(i + 1)); }
+  await all;
+  kept.forEach((m, i) => {
+    assert.strictEqual(m.length, 100 * 1024);
+    assert.ok(m.every((b) => b === i + 1), `message ${i}`);
+  });
+
+  ws.close();
+  await server.stop();
+});
+
+test('an unknown websocket.thread throws', () => {
+  assert.throws(() => new Server({ ...options, websocket: { thread: 'worker' } }), /websocket\.thread/);
 });
 
 test('a server close reaches the client with its code and reason', async (t) => {
@@ -145,5 +222,136 @@ test('a buffer sent twice still arrives right when its turn spans several batche
     [big, a, b].forEach((ws) => ws.close());
   }
 
+  await server.stop();
+});
+
+test('a delivery split in calls reads its side payloads in order across them', async (t) => {
+  const got = [];
+  const server = new Server(options, { onWsMessage(ws, data) { got.push([ws, data.toString()]); } });
+  t.after(() => server.stop());
+  // ws_message, flagged side: the payload is the next Buffer in `side`
+  const record = (conn) => {
+    const r = Buffer.alloc(24);
+    r[0] = 2;
+    r[1] = 8;
+    r.writeUInt32LE(conn, 8);
+    return r;
+  };
+  const side = [Buffer.from('first'), Buffer.from('second'), Buffer.from('third')];
+  server._onEvents(Buffer.concat([record(1), record(2)]), side);
+  server._onEvents(record(3), side);
+  assert.deepStrictEqual(got, [[1, 'first'], [2, 'second'], [3, 'third']]);
+  assert.strictEqual(side.length, 0, 'kept no longer than its messages');
+  await server.stop();
+});
+
+test('transientMessages: each message is whole during its call; what JS reads later is a copy', async (t) => {
+  const sizes = [10, 200, 70 * 1024, 5, 300 * 1024, 1];
+  const copies = [];
+  let request;
+  const http = require('node:http');
+  const httpServer = http.createServer((req, res) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => res.end(Buffer.concat(chunks)));
+  });
+  const server = new Server({ ...options, websocket: { ...options.websocket, transientMessages: true } }, {
+    onWsOpen(id, req) { request = req; },
+    onWsMessage(id, data) {
+      copies.push(Buffer.from(data));
+      server.send(id, data);
+    },
+  }).serveHttp(httpServer);
+  t.after(() => server.stop());
+
+  const ws = await open(`ws://127.0.0.1:${server.port}/`);
+  ws.binaryType = 'arraybuffer';
+  const echoed = [];
+  const done = new Promise((resolve) => {
+    ws.onmessage = (e) => { echoed.push(Buffer.from(e.data)); if (echoed.length === sizes.length) { resolve(); } };
+  });
+  sizes.forEach((n, i) => ws.send(new Uint8Array(n).fill(i + 1)));
+  await done;
+  sizes.forEach((n, i) => {
+    assert.ok(copies[i].length === n && copies[i].every((x) => x === i + 1), `message ${i}`);
+    assert.ok(echoed[i].length === n && echoed[i].every((x) => x === i + 1), `echo ${i}`);
+  });
+  assert.strictEqual(request.remoteAddress, '127.0.0.1');
+
+  // an http.Server reads raw bytes after their batch
+  const body = Buffer.alloc(100 * 1024, 7);
+  const res = await fetch(`http://127.0.0.1:${server.port}/up`, { method: 'POST', body });
+  assert.ok(Buffer.from(await res.arrayBuffer()).equals(body));
+  ws.close();
+  await server.stop();
+});
+
+test('sockets closed and echoed to mid-burst, while other sockets wait to be read', async (t) => {
+  const CLIENTS = 20;
+  const BURST = 20;
+  const seen = new Map();
+  const server = new Server(options, {
+    onWsMessage(ws, data) {
+      const n = (seen.get(ws) ?? 0) + 1;
+      seen.set(ws, n);
+      // every fourth socket closes halfway through its own burst
+      if (data[0] % 4 === 0 && n === BURST / 2) { return server.closeWebSocket(ws, 4000, 'half'); }
+      server.send(ws, data);
+    },
+  });
+  t.after(() => server.stop());
+  const sockets = await Promise.all(Array.from({ length: CLIENTS }, () => open(`ws://127.0.0.1:${server.port}/`)));
+  const results = sockets.map((ws, i) => new Promise((resolve) => {
+    let echoes = 0;
+    ws.onmessage = (e) => {
+      const b = new Uint8Array(e.data);
+      assert.ok(b.length === 8 * 1024 && b.every((x) => x === i));
+      if (++echoes === BURST) { resolve(['done', echoes]); }
+    };
+    ws.onclose = (e) => resolve([e.code, echoes]);
+  }));
+  sockets.forEach((ws, i) => { for (let k = 0; k < BURST; k++) { ws.send(new Uint8Array(8 * 1024).fill(i)); } });
+  const out = await Promise.all(results);
+  out.forEach(([how, echoes], i) => {
+    if (i % 4 === 0) {
+      assert.deepStrictEqual([how, echoes], [4000, BURST / 2 - 1], `socket ${i}`);
+    } else {
+      assert.deepStrictEqual([how, echoes], ['done', BURST], `socket ${i}`);
+    }
+  });
+  for (const ws of sockets) { ws.close(); }
+  await server.stop();
+});
+
+test('a buffer sent to many sockets in one turn crosses once, and each gets its bytes', async (t) => {
+  const N = 6;
+  const SIZE = 4 * 1024;
+  const ids = [];
+  let before;
+  const server = new Server(options, {
+    onWsOpen(id) { ids.push(id); },
+    onWsMessage() {
+      before = server.stats().commandBytes;
+      const [a, b, c] = [1, 2, 3].map((x) => Buffer.alloc(SIZE, x));
+      for (const id of ids) { server.send(id, a); }
+      for (const id of ids) { server.send(id, b); }
+      for (const id of ids) { server.send(id, a); server.send(id, c); }
+    },
+  });
+  t.after(() => server.stop());
+  const sockets = await Promise.all(Array.from({ length: N }, () => open(`ws://127.0.0.1:${server.port}/`)));
+  const got = sockets.map((ws) => new Promise((resolve) => {
+    const seen = [];
+    ws.onmessage = (e) => {
+      const m = new Uint8Array(e.data);
+      seen.push(m.length === SIZE && m.every((x) => x === m[0]) ? m[0] : -1);
+      if (seen.length === 4) { resolve(seen); }
+    };
+  }));
+  sockets[0].send('go');
+  for (const seen of await Promise.all(got)) { assert.deepStrictEqual(seen, [1, 2, 1, 3]); }
+  // three buffers' bytes, not N × 4 sends' worth
+  assert.ok(server.stats().commandBytes - before < 4 * SIZE, `${server.stats().commandBytes - before} command bytes`);
+  for (const ws of sockets) { ws.close(); }
   await server.stop();
 });

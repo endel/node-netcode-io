@@ -54,6 +54,10 @@ pub const Event = enum(u8) {
     /// conn: raw. The peer sent its last byte; the connection stays open
     /// for writes until `raw_close`.
     raw_end = 17,
+    /// conn: an HTTP/1.1 request JS answers itself, head and body whole.
+    /// Payload: u16 method length | method | `Request` | the body. Answer
+    /// with `http_respond` or `http_pass`.
+    http_request = 18,
     /// The server stopped: the last event.
     stopped = 20,
     _,
@@ -88,6 +92,12 @@ pub const Command = enum(u8) {
     /// conn: raw. No `raw_data` until `raw_resume`.
     raw_pause = 14,
     raw_resume = 15,
+    /// conn: an `http_request`'s. code: status. Payload: u32 header bytes |
+    /// header lines, each ending in CRLF | the body.
+    http_respond = 16,
+    /// conn: an `http_request`'s. Served as if JS took no requests: by the
+    /// raw handler, so JS's `http.Server`.
+    http_pass = 17,
     stop = 20,
     _,
 };
@@ -110,6 +120,9 @@ pub const flag = struct {
     pub const ref: u8 = 2;
     /// stream_opened: no stream; the token's id is meaningless.
     pub const failed: u8 = 4;
+    /// ws_message, raw_data: the payload is a Buffer of its own, the next
+    /// in the delivery's second argument.
+    pub const side: u8 = 8;
 };
 
 pub const Header = struct {
@@ -203,7 +216,33 @@ pub const Request = struct {
         const start = out.items.len;
         errdefer out.shrinkRetainingCapacity(start);
         try out.appendNTimes(gpa, 0, header_len);
+        try appendFields(gpa, out, addr, path, names);
+        try finish(out, start, header);
+    }
 
+    /// An `http_request`: the method, a `Request`'s fields, then the body.
+    pub fn appendHttp(
+        gpa: std.mem.Allocator,
+        out: *std.ArrayList(u8),
+        header: Header,
+        method: []const u8,
+        addr: Address,
+        target: []const u8,
+        names: anytype,
+        body: []const u8,
+    ) !void {
+        const start = out.items.len;
+        errdefer out.shrinkRetainingCapacity(start);
+        try out.appendNTimes(gpa, 0, header_len);
+        try appendString(gpa, out, method[0..@min(method.len, std.math.maxInt(u16))]);
+        try appendFields(gpa, out, addr, target, names);
+        try out.appendSlice(gpa, body);
+        var h = header;
+        h.kind = @backingInt(Event.http_request);
+        try finish(out, start, h);
+    }
+
+    fn appendFields(gpa: std.mem.Allocator, out: *std.ArrayList(u8), addr: Address, path: []const u8, names: anytype) !void {
         try out.appendSlice(gpa, &addr.encode());
         try appendString(gpa, out, path[0..@min(path.len, std.math.maxInt(u16))]);
 
@@ -218,7 +257,10 @@ pub const Request = struct {
             count += 1;
         }
         std.mem.writeInt(u16, out.items[count_at..][0..2], count, .little);
+    }
 
+    /// Writes the record header at `start`, its length counted to the end.
+    fn finish(out: *std.ArrayList(u8), start: usize, header: Header) !void {
         var h = header;
         h.len = std.math.cast(u32, out.items.len - start - header_len) orelse return error.TooLarge;
         h.write(out.items[start..][0..header_len]);

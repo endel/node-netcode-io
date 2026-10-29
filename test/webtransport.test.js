@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { Server } = require('..');
+const { thread } = require('./thread.js');
 
 const root = path.join(__dirname, '..');
 const certs = path.join(__dirname, 'certs');
@@ -14,6 +15,7 @@ const options = {
   port: 0,
   cert: path.join(certs, 'server.crt'),
   key: path.join(certs, 'server.key'),
+  websocket: { thread },
 };
 
 function runClient(port, urlPath) {

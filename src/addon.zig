@@ -1,21 +1,29 @@
-//! The Node-API module: what `lib/index.js` calls. Five functions, all on
-//! the JS thread:
+//! The Node-API module: what `lib/index.js` calls, all on the JS thread:
 //!
 //!   listen(options, onEvents) -> handle   binds, starts the loop thread
-//!   submit(handle, Uint8Array, len?)      queues a command batch: its first `len` bytes
+//!   submit(handle, Uint8Array, len?)      runs or queues a command batch: its first `len` bytes
+//!   send(handle, kind, flags, conn, data) runs one WebSocket or raw send now, from `data`
+//!                                         (`Mode.node`)
 //!   port(handle) -> number                the bound UDP port
 //!   ref(handle, bool)                     whether the server keeps Node alive
 //!   stats(handle) -> object               counters, for tuning
-//!   destroy(handle)                       frees it, after the `stopped` event
+//!   destroy(handle) -> Buffer?            frees it, after the `stopped` event;
+//!                                         returns the events left, if any
 //!
-//! `onEvents(ArrayBuffer)` gets every event batch, through a threadsafe
-//! function the loop thread calls once per batch.
+//! `onEvents(Buffer)` gets every event batch: the loop thread's
+//! through a threadsafe function it calls once per batch, and in
+//! `Mode.node` the HTTP/1.1 listener's straight from Node's loop
+//! (`local.zig`).
 
 const std = @import("std");
 const quic = @import("quic");
 const napi = @import("napi.zig");
 const server = @import("server.zig");
 const Host = server.Host;
+const Local = @import("local.zig").Local;
+const buffer = @import("local.zig").buffer;
+const batchBuffer = @import("local.zig").batchBuffer;
+const cut = @import("local.zig").cut;
 
 pub const std_options: std.Options = .{ .log_level = .warn };
 
@@ -25,7 +33,14 @@ const gpa = std.heap.c_allocator;
 /// finalizer frees it, as a call may still be queued when the host goes.
 const Binding = struct {
     host: ?*Host,
+    /// The HTTP/1.1 listener, when it runs on this thread (`Mode.node`).
+    local: ?*Local = null,
     tsfn: napi.ThreadsafeFunction = undefined,
+    /// JS has `onHttpRequest`.
+    takes_requests: bool = false,
+    /// A batch handed out a request per call (`local.cut`), from `rest_at`.
+    rest: std.ArrayList(u8) = .empty,
+    rest_at: usize = 0,
     /// The environment is going away: no more calls into it.
     exiting: std.atomic.Value(bool) = .init(false),
 };
@@ -33,6 +48,7 @@ const Binding = struct {
 export fn napi_register_module_v1(env: napi.Env, exports: napi.Value) callconv(.c) ?napi.Value {
     define(env, exports, "listen", jsListen) catch return null;
     define(env, exports, "submit", jsSubmit) catch return null;
+    define(env, exports, "send", jsSend) catch return null;
     define(env, exports, "port", jsPort) catch return null;
     define(env, exports, "ref", jsRef) catch return null;
     define(env, exports, "stats", jsStats) catch return null;
@@ -81,8 +97,10 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     const options = argv[0] orelse return throw(env, "listen(options, onEvents): options missing");
     const on_events = argv[1] orelse return throw(env, "listen(options, onEvents): onEvents missing");
 
-    const host = Host.create() catch return throw(env, "out of memory");
-    const config = readConfig(env, options, host.allocator()) catch |err| {
+    const mode = readMode(env, options) catch return throw(env, "options.websocket.thread must be 'node' or 'quic'");
+    const host = Host.create(mode) catch return throw(env, "out of memory");
+    var h1: quic.event_loop.Http1Config = undefined;
+    const config = readConfig(env, options, host.allocator(), mode, &h1) catch |err| {
         host.destroy();
         return throw(env, switch (err) {
             error.MissingCertificate => "options.cert and options.key are required",
@@ -92,11 +110,14 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
         });
     };
 
+    const takes_requests = (boolean(env, options, "requests") catch null) orelse false;
+    if (takes_requests) host.takeRequests();
+
     const b = gpa.create(Binding) catch {
         host.destroy();
         return throw(env, "out of memory");
     };
-    b.* = .{ .host = host };
+    b.* = .{ .host = host, .takes_requests = takes_requests };
 
     var name: napi.Value = undefined;
     _ = napi.napi_create_string_utf8(env, "netcode-io", napi.auto_length, &name);
@@ -114,6 +135,36 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
         const msg = std.fmt.bufPrintSentinel(&buf, "listen failed: {s}", .{@errorName(err)}, 0) catch "listen failed";
         return throw(env, msg);
     };
+    if (mode == .node) {
+        const tls = config.tls_config.?;
+        b.local = Local.create(env, host, h1, .{
+            .address = config.address,
+            .ipv6 = config.ipv6,
+            .quic_port = host.port(),
+            .reuse_port = config.reuse_port,
+            .certs = .{
+                .entries = tls.certs,
+                .single = .{
+                    .cert_chain_der = tls.cert_chain_der,
+                    .private_key_bytes = tls.private_key_bytes,
+                    .private_key_algorithm = tls.private_key_algorithm,
+                },
+                .client_auth = tls.client_auth,
+            },
+        }, on_events) catch |err| {
+            host.requestStop();
+            b.host = null;
+            host.destroy();
+            _ = napi.napi_release_threadsafe_function(b.tsfn, .release);
+            var buf: [128]u8 = undefined;
+            const msg = std.fmt.bufPrintSentinel(&buf, "listen failed: {s}", .{@errorName(err)}, 0) catch "listen failed";
+            return throw(env, msg);
+        };
+        b.local.?.tcp.takes_requests = takes_requests;
+        if (object(env, options, "websocket") catch null) |ws| {
+            b.local.?.transient = (boolean(env, ws, "transientMessages") catch null) orelse false;
+        }
+    }
     _ = napi.napi_add_env_cleanup_hook(env, onEnvExit, b);
 
     var handle: napi.Value = undefined;
@@ -121,7 +172,17 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     return handle;
 }
 
-fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator) !quic.event_loop.Config {
+fn readMode(env: napi.Env, options: napi.Value) !server.Mode {
+    const ws = try object(env, options, "websocket") orelse return .node;
+    var buf: [8]u8 = undefined;
+    var fba: std.heap.FixedBufferAllocator = .init(&buf);
+    const v = string(env, ws, "thread", fba.allocator()) catch return error.BadMode;
+    return std.meta.stringToEnum(server.Mode, v orelse return .node) orelse error.BadMode;
+}
+
+/// `h1` is the HTTP/1.1 listener's, which the QUIC server runs itself
+/// in `Mode.quic`.
+fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator, mode: server.Mode, h1_out: *quic.event_loop.Http1Config) !quic.event_loop.Config {
     const cert = try string(env, options, "cert", a) orelse return error.MissingCertificate;
     const key = try string(env, options, "key", a) orelse return error.MissingCertificate;
     var config: quic.event_loop.Config = .{
@@ -144,7 +205,8 @@ fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator) !quic.ev
         if (try uint(env, ws, "maxSendBuffer")) |v| h1.websocket.max_send_buffer = v;
         if (try uint(env, ws, "pingInterval")) |v| h1.websocket.ping_interval_ms = v;
     }
-    config.http1 = h1;
+    h1_out.* = h1;
+    if (mode == .quic) config.http1 = h1;
     return config;
 }
 
@@ -217,28 +279,45 @@ fn notify(ctx: ?*anyopaque) void {
     _ = napi.napi_call_threadsafe_function(b.tsfn, null, .nonblocking);
 }
 
-/// JS thread: hands the waiting events to `onEvents`, copied into an
-/// ArrayBuffer JS owns, so a message stays valid for as long as it's kept.
+/// JS thread: hands the waiting events to `onEvents`, in a Buffer JS owns
+/// (`batchBuffer`), so a message stays valid for as long as it's kept.
 fn deliver(env_opt: ?napi.Env, cb_opt: ?napi.Value, ctx: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
     const env = env_opt orelse return;
     const cb = cb_opt orelse return;
     const b: *Binding = @ptrCast(@alignCast(ctx.?));
     const host = b.host orelse return;
-    const bytes = host.take();
-    if (bytes.len == 0) return;
-
-    var data: ?*anyopaque = null;
-    var ab: napi.Value = undefined;
-    if (napi.napi_create_arraybuffer(env, bytes.len, &data, &ab) != .ok) return;
-    @memcpy(@as([*]u8, @ptrCast(data.?))[0..bytes.len], bytes);
     var recv: napi.Value = undefined;
     _ = napi.napi_get_undefined(env, &recv);
-    // A throw stays pending, and Node reports it as uncaught.
+    if (b.rest_at == b.rest.items.len) {
+        if (host.take().len == 0) return;
+        if (!b.takes_requests) {
+            const ab = batchBuffer(env, &host.taken) orelse return;
+            // A throw stays pending, and Node reports it as uncaught.
+            _ = napi.napi_call_function(env, recv, cb, 1, &.{ab}, null);
+            return;
+        }
+        std.mem.swap(std.ArrayList(u8), &b.rest, &host.taken);
+        b.rest_at = 0;
+    }
+    // A request per call; microtasks run between calls, so the rest
+    // comes from a call of its own.
+    const rest = b.rest.items[b.rest_at..];
+    const n = cut(rest);
+    const ab = buffer(env, rest[0..n]) orelse return;
+    b.rest_at += n;
+    if (b.rest_at < b.rest.items.len) {
+        _ = napi.napi_call_threadsafe_function(b.tsfn, null, .nonblocking);
+    } else {
+        b.rest.clearRetainingCapacity();
+        b.rest_at = 0;
+    }
     _ = napi.napi_call_function(env, recv, cb, 1, &.{ab}, null);
 }
 
 fn finalizeBinding(_: ?napi.Env, data: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
-    gpa.destroy(@as(*Binding, @ptrCast(@alignCast(data.?))));
+    const b: *Binding = @ptrCast(@alignCast(data.?));
+    b.rest.deinit(gpa);
+    gpa.destroy(b);
 }
 
 /// Node is tearing the environment down with the server still up: a
@@ -247,6 +326,10 @@ fn finalizeBinding(_: ?napi.Env, data: ?*anyopaque, _: ?*anyopaque) callconv(.c)
 fn onEnvExit(ctx: ?*anyopaque) callconv(.c) void {
     const b: *Binding = @ptrCast(@alignCast(ctx.?));
     b.exiting.store(true, .release);
+    if (b.local) |local| {
+        b.local = null;
+        _ = local.destroy();
+    }
     const host = b.host orelse return;
     b.host = null;
     host.requestStop();
@@ -254,6 +337,29 @@ fn onEnvExit(ctx: ?*anyopaque) callconv(.c) void {
 }
 
 // ── Commands ─────────────────────────────────────────────────────────
+
+/// A large send on Node's thread skips the batch, and its copy.
+fn jsSend(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
+    const argv = args(env, info, 5);
+    const b = bindingOf(env, argv[0]) orelse return throw(env, "send: not a server handle");
+    const local = b.local orelse return throw(env, "send: only with websocket.thread 'node'");
+    var kind: u32 = 0;
+    var flags: u32 = 0;
+    var conn: i64 = 0;
+    if (napi.napi_get_value_uint32(env, argv[1] orelse return null, &kind) != .ok) return null;
+    if (napi.napi_get_value_uint32(env, argv[2] orelse return null, &flags) != .ok) return null;
+    if (napi.napi_get_value_int64(env, argv[3] orelse return null, &conn) != .ok) return null;
+    const data = argv[4] orelse return throw(env, "send: data missing");
+    var is_typed = false;
+    if (napi.napi_is_typedarray(env, data, &is_typed) != .ok or !is_typed) return throw(env, "send: data must be a Uint8Array");
+    var len: usize = 0;
+    var ptr: ?*anyopaque = null;
+    if (napi.napi_get_typedarray_info(env, data, null, &len, &ptr, null, null) != .ok) return null;
+    const bytes: []const u8 = if (len == 0) &.{} else @as([*]const u8, @ptrCast(ptr.?))[0..len];
+    local.sendNow(std.math.cast(u8, kind) orelse return null, std.math.cast(u8, flags) orelse return null, @intCast(conn), bytes) catch
+        return throw(env, "send: not a WebSocket or raw send");
+    return null;
+}
 
 fn jsSubmit(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     const argv = args(env, info, 3);
@@ -275,7 +381,8 @@ fn jsSubmit(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
         len = n;
     }
     if (len == 0) return null;
-    host.submit(@as([*]const u8, @ptrCast(data.?))[0..len]) catch return throw(env, "out of memory");
+    const bytes = @as([*]const u8, @ptrCast(data.?))[0..len];
+    (if (b.local) |local| local.submit(bytes) else host.submit(bytes)) catch return throw(env, "out of memory");
     return null;
 }
 
@@ -295,6 +402,7 @@ fn jsRef(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     var keep = true;
     if (argv[1]) |v| _ = napi.napi_get_value_bool(env, v, &keep);
     _ = if (keep) napi.napi_ref_threadsafe_function(env, b.tsfn) else napi.napi_unref_threadsafe_function(env, b.tsfn);
+    if (b.local) |local| local.ref(keep);
     return null;
 }
 
@@ -332,7 +440,13 @@ fn jsDestroy(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     const host = b.host orelse return null;
     b.host = null;
     _ = napi.napi_remove_env_cleanup_hook(env, onEnvExit, b);
+    // Before the host: the listener's certificates live in its arena.
+    const rest: ?napi.Value = if (b.local) |local| blk: {
+        b.local = null;
+        const events = local.destroy();
+        break :blk if (events.len > 0) buffer(env, events) else null;
+    } else null;
     host.destroy();
     _ = napi.napi_release_threadsafe_function(b.tsfn, .release);
-    return null;
+    return rest;
 }

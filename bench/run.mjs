@@ -2,7 +2,7 @@
 // order alternating each round, a fresh server and load per run.
 //
 //   (cd wsload && go build)
-//   UWS=/path/to/uWebSockets.js GOMAXPROCS=4 node run.mjs [--rounds 3] [--only name]
+//   UWS=/path/to/uWebSockets.js GOMAXPROCS=4 node run.mjs [--rounds 3] [--only regex]
 //       [--measure 8] [--warmup 2] [--transports uws,netcode] [--out file.json]
 //
 // Cap the load generator (GOMAXPROCS): uncapped, its spinning threads starve
@@ -33,6 +33,13 @@ const CELLS = [
   { name: 'echo 2000 @20/s work5', c: 2000, rate: 20, work: 5 },
   { name: 'broadcast 32x32 @4/s', c: 1024, rate: 4, spread: true, mode: 'broadcast:32' },
   { name: 'broadcast 32x32 @2/s', c: 1024, rate: 2, spread: true, mode: 'broadcast:32' },
+  { name: 'broadcast 32x32 @2/s x3', c: 1024, rate: 2, spread: true, mode: 'broadcast:32:3' },
+  { name: 'size 1KiB 500 @20/s', c: 500, rate: 20, spread: true, size: 1024 },
+  { name: 'size 16KiB 200 @20/s', c: 200, rate: 20, spread: true, size: 16 * 1024 },
+  { name: 'size 16KiB 200 @20/s tls', c: 200, rate: 20, spread: true, size: 16 * 1024, tls: true },
+  { name: 'size 64KiB 50 @20/s', c: 50, rate: 20, spread: true, size: 64 * 1024 },
+  { name: 'size 64KiB 50 @20/s tls', c: 50, rate: 20, spread: true, size: 64 * 1024, tls: true },
+  { name: 'size 16KiB closed 50x1', c: 50, rate: 0, inflight: 1, size: 16 * 1024 },
   { name: 'spread 500 @20/s', c: 500, rate: 20, spread: true },
   { name: 'spread 2000 @20/s', c: 2000, rate: 20, spread: true },
   { name: 'spread 2000 @20/s tls', c: 2000, rate: 20, spread: true, tls: true },
@@ -55,7 +62,7 @@ async function runOnce(cell, transport) {
   try {
     await once(server, 'ready');
     const args = ['-addr', `127.0.0.1:${p}`, '-c', String(cell.c), '-rate', String(cell.rate), '-inflight', String(cell.inflight ?? 1),
-      '-size', '50', '-warmup', `${WARMUP}s`, '-duration', `${MEASURE}s`];
+      '-size', String(cell.size ?? 50), '-warmup', `${WARMUP}s`, '-duration', `${MEASURE}s`];
     if (cell.tls) { args.push('-tls'); }
     if (cell.spread) { args.push('-spread'); }
     const client = spawn(path.join(here, 'wsload', 'wsload'), args, { stdio: ['ignore', 'pipe', 'inherit'] });
@@ -82,7 +89,7 @@ const fmt = (x, d = 2) => (x === undefined || Number.isNaN(x)) ? '–' : x.toFix
 const median = (xs) => { const s = xs.filter(Number.isFinite).sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
 
 const all = [];
-for (const cell of CELLS.filter((c) => only === undefined || c.name.includes(only))) {
+for (const cell of CELLS.filter((c) => only === undefined || new RegExp(only).test(c.name))) {
   const runs = [];
   for (let round = 0; round < rounds; round++) {
     const order = round % 2 === 0 ? transports : [...transports].reverse();

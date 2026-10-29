@@ -4,9 +4,11 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const http = require('node:http');
+const net = require('node:net');
 const https = require('node:https');
 const path = require('node:path');
 const { Server } = require('..');
+const { thread } = require('./thread.js');
 
 const certs = path.join(__dirname, 'certs');
 const options = {
@@ -14,7 +16,7 @@ const options = {
   port: 0,
   cert: path.join(certs, 'server.crt'),
   key: path.join(certs, 'server.key'),
-  websocket: { tls: false },
+  websocket: { tls: false, thread },
 };
 
 function request(port, method, urlPath, body, agent) {
@@ -102,7 +104,7 @@ test('without an http.Server, requests get 404', async (t) => {
 
 test('over TLS, the socket says it is encrypted', async (t) => {
   const httpServer = http.createServer((req, res) => res.end(String(req.socket.encrypted)));
-  const server = new Server({ ...options, websocket: undefined }).serveHttp(httpServer);
+  const server = new Server({ ...options, websocket: { thread } }).serveHttp(httpServer);
   t.after(() => server.stop());
 
   const body = await new Promise((resolve, reject) => {
@@ -142,7 +144,7 @@ test('certificates may be given as PEM instead of paths', async (t) => {
   const httpServer = http.createServer((req, res) => res.end('pem'));
   const server = new Server({
     ...options,
-    websocket: undefined,
+    websocket: { thread },
     cert: fs.readFileSync(path.join(certs, 'server.crt')),
     key: fs.readFileSync(path.join(certs, 'server.key'), 'utf8'),
   }).serveHttp(httpServer);
@@ -241,5 +243,78 @@ test('requests that arrive together are handled as separate sockets would be: mi
   assert.deepStrictEqual(order, ['/b', 'after /b', '/c', 'after /c']);
   [first, ...others].forEach((s) => s.destroy());
 
+  await server.stop();
+});
+
+test('onHttpRequest answers what it takes, later if it likes; what it passes reaches the http.Server', async (t) => {
+  const httpServer = http.createServer(async (req, res) => {
+    const body = await readBody(req);
+    res.end(`node ${req.method} ${req.url} ${body}`);
+  });
+  const seen = [];
+  const server = new Server(options, {
+    onHttpRequest(id, req) {
+      seen.push({ method: req.method, path: req.path, host: req.header('host'), body: req.body.toString(), remote: req.remoteAddress });
+      if (req.path === '/pass') { return server.passRequest(id); }
+      const answer = () => server.respond(id, 201, { 'content-type': 'text/plain', 'x-native': '1' }, `native ${req.method} ${req.path} ${req.body}`);
+      if (req.path === '/later') { setTimeout(answer, 20); } else { answer(); }
+    },
+  }).serveHttp(httpServer);
+  t.after(() => server.stop());
+
+  // one connection for all: keep-alive survives native answers and a pass
+  const agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
+  t.after(() => agent.destroy());
+  const a = await request(server.port, 'POST', '/now', 'hi', agent);
+  assert.strictEqual(a.res.statusCode, 201);
+  assert.strictEqual(a.res.headers['x-native'], '1');
+  assert.strictEqual(a.res.headers['content-type'], 'text/plain');
+  assert.strictEqual(a.body, 'native POST /now hi');
+  const b = await request(server.port, 'GET', '/later', undefined, agent);
+  assert.strictEqual(b.body, 'native GET /later ');
+  const c = await request(server.port, 'POST', '/pass', 'raw', agent);
+  assert.strictEqual(c.res.statusCode, 200);
+  assert.strictEqual(c.body, 'node POST /pass raw');
+
+  assert.deepStrictEqual(seen.map((s) => [s.method, s.path, s.body]), [['POST', '/now', 'hi'], ['GET', '/later', ''], ['POST', '/pass', 'raw']]);
+  assert.strictEqual(seen[0].host, `127.0.0.1:${server.port}`);
+  assert.strictEqual(seen[0].remote, '127.0.0.1');
+  await server.stop();
+});
+
+test('respond refuses a header that could split the response', async (t) => {
+  let thrown;
+  const server = new Server(options, {
+    onHttpRequest(id) {
+      try { server.respond(id, 200, { 'x-a': 'b\r\nx-evil: 1' }, ''); } catch (e) { thrown = e; }
+      server.respond(id, 200, {}, 'safe');
+    },
+  });
+  t.after(() => server.stop());
+  const r = await request(server.port, 'GET', '/', undefined);
+  assert.strictEqual(r.body, 'safe');
+  assert.ok(thrown instanceof TypeError);
+  await server.stop();
+});
+
+test('onHttpRequest: microtasks run between requests that arrive together, as between Node\'s', async (t) => {
+  const order = [];
+  const server = new Server(options, {
+    onHttpRequest(id, req) {
+      order.push(`request ${req.path}`);
+      Promise.resolve().then(() => order.push(`then ${req.path}`));
+      server.respond(id, 200, {}, 'ok');
+    },
+  });
+  t.after(() => server.stop());
+  const sockets = await Promise.all(Array.from({ length: 8 }, () => new Promise((resolve) => {
+    const s = net.connect(server.port, '127.0.0.1', () => resolve(s));
+  })));
+  const answered = sockets.map((s) => new Promise((resolve) => s.once('data', resolve)));
+  sockets.forEach((s, i) => s.write(`GET /${i} HTTP/1.1\r\nHost: x\r\n\r\n`));
+  await Promise.all(answered);
+  for (const s of sockets) { s.destroy(); }
+  const expected = order.filter((e) => e.startsWith('request')).flatMap((e) => [e, e.replace('request', 'then')]);
+  assert.deepStrictEqual(order, expected);
   await server.stop();
 });

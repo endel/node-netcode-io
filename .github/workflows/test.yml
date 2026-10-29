@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: netcode-io
+
+      # build.zig.zon takes quic-zig from ../quic-zig. Its raw connections
+      # and loop helpers are on http1-raw until that merges.
+      - uses: actions/checkout@v4
+        with:
+          repository: endel/quic-zig
+          ref: http1-raw
+          path: quic-zig
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build
+        working-directory: netcode-io
+        run: zig build -Doptimize=ReleaseFast
+
+      # Zig's wire tests, then node --test once for each websocket.thread
+      - name: Test
+        working-directory: netcode-io
+        run: npm test

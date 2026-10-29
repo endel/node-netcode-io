@@ -3,8 +3,9 @@
 //! lock guarding them is held for an append or a swap, never across a
 //! callback.
 //!
-//! The loop thread owns every connection. JS names them by id, and a
-//! command for one that's gone does nothing.
+//! The loop thread owns every QUIC connection, and in `Mode.quic` every TCP
+//! one too. JS names them by id, and a command for one that's gone does
+//! nothing.
 //!
 //! The thread, not Node's: QUIC's acknowledgements and loss timers live in
 //! userspace, so a room tick or a GC pause on the JS thread would stall
@@ -17,20 +18,32 @@ const event_loop = quic.event_loop;
 const xev = event_loop.Xev;
 const ConnEntry = quic.connection_manager.ConnEntry;
 const wire = @import("wire.zig");
+const tcp = @import("tcp.zig");
+const Tcp = tcp.Tcp;
 
 const gpa = std.heap.c_allocator;
 const log = std.log.scoped(.netcode_io);
 
-/// Event bytes waiting for JS past which reads pause, so flow control holds
-/// QUIC peers back, and datagrams are dropped. Reads resume once JS has
-/// taken the batch.
-const max_pending_events = 8 << 20;
+/// Event bytes waiting for JS past which stream reads pause, so flow
+/// control holds QUIC peers back, and datagrams are dropped. Reads resume
+/// once JS has taken the batch.
+const max_pending_events = tcp.max_pending_events;
 
 /// Events in one tick past which JS is woken before the tick ends, so a
 /// long one doesn't leave it idle.
 const early_notify = 32;
 
-pub const Server = event_loop.Server(Handler);
+/// Where WebSockets and plain HTTP are served.
+pub const Mode = enum {
+    /// On Node's thread (`local.zig`): no hop between threads, so the least
+    /// CPU. QUIC alone runs here.
+    node,
+    /// Here, beside QUIC: Node's event loop does less, at more CPU overall.
+    quic,
+};
+
+const Handler = union(Mode) { node: Quic, quic: Both };
+const Server = union(Mode) { node: event_loop.Server(Quic), quic: event_loop.Server(Both) };
 
 /// What crossed between the threads, and how often each woke the other:
 /// for tuning. Never reset.
@@ -50,7 +63,7 @@ pub const Stats = struct {
 
     const Counter = struct {
         v: std.atomic.Value(u64) = .init(0),
-        fn add(self: *Counter, n: u64) void {
+        pub fn add(self: *Counter, n: u64) void {
             _ = self.v.fetchAdd(n, .monotonic);
         }
         pub fn get(self: *const Counter) u64 {
@@ -103,18 +116,30 @@ pub const Host = struct {
 
     stats: Stats = .{},
 
-    pub fn create() !*Host {
+    pub fn create(mode: Mode) !*Host {
         const self = try gpa.create(Host);
         self.* = .{
             .arena = .init(gpa),
-            .handler = .{ .host = self },
+            .handler = undefined,
             .server = undefined,
             .thread = undefined,
             .wake = undefined,
             .notify = undefined,
             .notify_ctx = null,
         };
+        self.handler = switch (mode) {
+            .node => .{ .node = .init(self) },
+            .quic => .{ .quic = .init(self) },
+        };
         return self;
+    }
+
+    /// Before `listen`: JS answers HTTP requests itself (`onHttpRequest`).
+    pub fn takeRequests(self: *Host) void {
+        switch (self.handler) {
+            .quic => |*h| h.tcp.takes_requests = true,
+            .node => {},
+        }
     }
 
     /// Strings in `config` must come from `self.arena`.
@@ -134,15 +159,38 @@ pub const Host = struct {
         self.notify_ctx = notify_ctx;
         self.wake = try xev.Async.init();
         errdefer self.wake.deinit();
-        self.server = try Server.init(gpa, &self.handler, config);
-        errdefer self.server.deinit();
+        self.server = switch (self.handler) {
+            .node => |*h| .{ .node = try .init(gpa, h, config) },
+            .quic => |*h| .{ .quic = try .init(gpa, h, config) },
+        };
+        errdefer self.deinitServer();
         self.thread = try std.Thread.spawn(.{}, run, .{self});
         self.started = true;
     }
 
     /// The UDP port, which the TCP listener shares unless told otherwise.
     pub fn port(self: *const Host) u16 {
-        return self.server.port();
+        return switch (self.server) {
+            inline else => |*s| s.port(),
+        };
+    }
+
+    fn eventLoop(self: *Host) *xev.Loop {
+        return switch (self.server) {
+            inline else => |*s| s.eventLoop(),
+        };
+    }
+
+    fn stopServer(self: *Host) void {
+        switch (self.server) {
+            inline else => |*s| s.stop(),
+        }
+    }
+
+    fn deinitServer(self: *Host) void {
+        switch (self.server) {
+            inline else => |*s| s.deinit(),
+        }
     }
 
     /// Any thread. CPU the loop thread has used, in nanoseconds; null when
@@ -154,8 +202,10 @@ pub const Host = struct {
 
     fn run(self: *Host) void {
         nameThread("netcode-io");
-        self.server.start();
-        const loop = self.server.eventLoop();
+        switch (self.server) {
+            inline else => |*s| s.start(),
+        }
+        const loop = self.eventLoop();
         self.wake.wait(loop, &self.wake_c, Host, self, onWake);
         // `wake` always rearms, so only the server's stop ends the loop.
         while (!loop.stopped()) {
@@ -165,8 +215,10 @@ pub const Host = struct {
             };
             self.endTick();
         }
-        self.handler.deinit();
-        self.server.deinit();
+        switch (self.handler) {
+            inline else => |*h| h.deinit(),
+        }
+        self.deinitServer();
         _ = self.emit(.stopped, .{}, &.{});
         self.wakeJs();
     }
@@ -175,6 +227,11 @@ pub const Host = struct {
     pub fn submit(self: *Host, batch: []const u8) !void {
         self.stats.submits += 1;
         self.stats.command_bytes += batch.len;
+        return self.enqueue(batch);
+    }
+
+    /// `submit` for part of a batch JS's submit already counted.
+    pub fn enqueue(self: *Host, batch: []const u8) !void {
         self.lock.lock();
         const was = self.commands_pending;
         self.command_ends.ensureUnusedCapacity(gpa, 1) catch |err| {
@@ -275,20 +332,28 @@ pub const Host = struct {
         const quit = self.quit;
         self.lock.unlock();
 
-        if (resume_reads) self.handler.resumeReads();
+        if (resume_reads) switch (self.handler) {
+            inline else => |*h| h.resumeReads(),
+        };
         var start: usize = 0;
         for (self.running_ends.items) |end| {
-            self.handler.runBatch(self.running.items[start..end]);
+            switch (self.handler) {
+                inline else => |*h| h.runBatch(self.running.items[start..end]),
+            }
             start = end;
         }
         self.running.clearRetainingCapacity();
         self.running_ends.clearRetainingCapacity();
-        if (quit) self.handler.stop();
-        self.server.flush();
+        if (quit) switch (self.handler) {
+            inline else => |*h| h.stop(),
+        };
+        switch (self.server) {
+            inline else => |*s| s.flush(),
+        }
     }
 
     /// Loop thread. Returns the bytes now waiting for JS.
-    fn emit(self: *Host, kind: wire.Event, header: wire.Header, parts: []const []const u8) usize {
+    pub fn emit(self: *Host, kind: wire.Event, header: wire.Header, parts: []const []const u8) usize {
         var h = header;
         h.kind = @backingInt(kind);
         self.stats.events.add(1);
@@ -298,7 +363,7 @@ pub const Host = struct {
         return self.signal();
     }
 
-    fn emitRequest(self: *Host, kind: wire.Event, header: wire.Header, addr: wire.Address, path: []const u8, headers: anytype) void {
+    pub fn emitRequest(self: *Host, kind: wire.Event, header: wire.Header, addr: wire.Address, path: []const u8, headers: anytype) void {
         var h = header;
         h.kind = @backingInt(kind);
         self.stats.events.add(1);
@@ -328,67 +393,66 @@ pub const Host = struct {
         self.notify(self.notify_ctx);
     }
 
-    fn pendingBytes(self: *Host) usize {
+    pub fn emitHttpRequest(self: *Host, header: wire.Header, method: []const u8, addr: wire.Address, target: []const u8, headers: anytype, body: []const u8) void {
+        self.stats.events.add(1);
+        self.lock.lock();
+        self.asleep = false;
+        wire.Request.appendHttp(gpa, &self.events, header, method, addr, target, headers, body) catch |err| log.err("dropped an event: {any}", .{err});
+        _ = self.signal();
+    }
+
+    pub fn pendingBytes(self: *Host) usize {
         self.lock.lock();
         defer self.lock.unlock();
         return self.events.items.len;
     }
 
-    fn markPaused(self: *Host) void {
+    pub fn markPaused(self: *Host) void {
         self.lock.lock();
         self.paused_any = true;
         self.lock.unlock();
     }
 };
 
-const Handler = struct {
+/// WebTransport: quic-zig's session and stream callbacks, and the commands
+/// for them.
+pub const Quic = struct {
     pub const protocol: event_loop.Protocol = .webtransport;
 
     host: *Host,
     /// QUIC connections JS has heard of, by `Session.id()`.
     conns: std.AutoHashMapUnmanaged(u64, *ConnEntry) = .empty,
-    sockets: std.AutoHashMapUnmanaged(u64, *event_loop.WsConn) = .empty,
-    raws: std.AutoHashMapUnmanaged(u64, Raw) = .empty,
     paused: std.ArrayList(Paused) = .empty,
     stopping: bool = false,
 
-    /// `stream` 0 is the connection itself, for a raw one.
     const Paused = struct { conn: u64, stream: u64 };
 
-    const Raw = struct {
-        conn: *event_loop.RawConn,
-        /// JS asked for `raw_drain`, which `onRawDrain` owes.
-        drain_wanted: bool = false,
-        /// By `raw_pause`, which the queue's own resume leaves alone.
-        js_paused: bool = false,
-        /// By the queue's cap.
-        cap_paused: bool = false,
-    };
+    fn init(host: *Host) Quic {
+        return .{ .host = host };
+    }
 
-    fn deinit(self: *Handler) void {
+    fn deinit(self: *Quic) void {
         self.conns.deinit(gpa);
-        self.sockets.deinit(gpa);
-        self.raws.deinit(gpa);
         self.paused.deinit(gpa);
     }
 
-    fn stop(self: *Handler) void {
+    fn stop(self: *Quic) void {
         if (self.stopping) return;
         self.stopping = true;
-        self.host.server.stop();
+        self.host.stopServer();
     }
 
-    fn track(self: *Handler, session: *event_loop.Session) u64 {
+    fn track(self: *Quic, session: *event_loop.Session) u64 {
         const id = session.id();
         self.conns.put(gpa, id, session.entry) catch {};
         return id;
     }
 
-    fn sessionOf(self: *Handler, conn: u64) ?event_loop.Session {
+    fn sessionOf(self: *Quic, conn: u64) ?event_loop.Session {
         return .{ .entry = self.conns.get(conn) orelse return null };
     }
 
-    fn pause(self: *Handler, s: *event_loop.Session, stream: u64) void {
+    fn pause(self: *Quic, s: *event_loop.Session, stream: u64) void {
         const conn = s.id();
         for (self.paused.items) |p| if (p.conn == conn and p.stream == stream) return;
         s.pauseStream(stream) catch return;
@@ -399,105 +463,42 @@ const Handler = struct {
         self.host.markPaused();
     }
 
-    fn pauseRaw(self: *Handler, raw: *Raw) void {
-        if (raw.cap_paused) return;
-        self.paused.append(gpa, .{ .conn = raw.conn.id(), .stream = 0 }) catch return;
-        raw.cap_paused = true;
-        raw.conn.pauseReading();
-        self.host.markPaused();
-    }
-
-    fn resumeReads(self: *Handler) void {
+    fn resumeReads(self: *Quic) void {
         for (self.paused.items) |p| {
-            if (p.stream == 0) {
-                const raw = self.raws.getPtr(p.conn) orelse continue;
-                raw.cap_paused = false;
-                if (!raw.js_paused) raw.conn.resumeReading();
-                continue;
-            }
             var s = self.sessionOf(p.conn) orelse continue;
             s.resumeStream(p.stream);
         }
         self.paused.clearRetainingCapacity();
     }
 
-    // ── WebSocket ────────────────────────────────────────────────────
-
-    pub fn onWsUpgrade(self: *Handler, req: *event_loop.WsRequest, path: []const u8) void {
-        const ws = req.accept(.{}) catch return;
-        self.sockets.put(gpa, ws.id(), ws) catch return ws.close(1011, "");
-        const addr = wire.Address.fromSockaddr(ws.peerAddress());
-        self.host.emitRequest(.ws_open, .{ .conn = ws.id() }, addr, path, req.headers());
-    }
-
-    pub fn onWsMessage(self: *Handler, ws: *event_loop.WsConn, data: []const u8, kind: event_loop.WsMessageKind) void {
-        const flags: u8 = if (kind == .text) wire.flag.text else 0;
-        _ = self.host.emit(.ws_message, .{ .conn = ws.id(), .flags = flags }, &.{data});
-    }
-
-    pub fn onWsClose(self: *Handler, ws: *event_loop.WsConn, code: u16, reason: []const u8) void {
-        if (!self.sockets.remove(ws.id())) return;
-        _ = self.host.emit(.ws_close, .{ .conn = ws.id(), .code = code }, &.{reason});
-    }
-
-    // ── Raw HTTP/1.1 ─────────────────────────────────────────────────
-
-    pub fn onRawOpen(self: *Handler, raw: *event_loop.RawConn) void {
-        self.raws.put(gpa, raw.id(), .{ .conn = raw }) catch return raw.close();
-        const addr = wire.Address.fromSockaddr(raw.peerAddress()).encode();
-        _ = self.host.emit(.raw_open, .{ .conn = raw.id() }, &.{&addr});
-    }
-
-    pub fn onRawData(self: *Handler, raw: *event_loop.RawConn, data: []const u8) void {
-        const pending = self.host.emit(.raw_data, .{ .conn = raw.id() }, &.{data});
-        if (pending > max_pending_events) if (self.raws.getPtr(raw.id())) |r| self.pauseRaw(r);
-    }
-
-    pub fn onRawClose(self: *Handler, raw: *event_loop.RawConn) void {
-        if (!self.raws.remove(raw.id())) return;
-        _ = self.host.emit(.raw_close, .{ .conn = raw.id() }, &.{});
-    }
-
-    pub fn onRawEnd(self: *Handler, raw: *event_loop.RawConn) void {
-        if (!self.raws.contains(raw.id())) return;
-        _ = self.host.emit(.raw_end, .{ .conn = raw.id() }, &.{});
-    }
-
-    pub fn onRawDrain(self: *Handler, raw: *event_loop.RawConn) void {
-        const r = self.raws.getPtr(raw.id()) orelse return;
-        if (!r.drain_wanted) return;
-        r.drain_wanted = false;
-        _ = self.host.emit(.raw_drain, .{ .conn = raw.id() }, &.{});
-    }
-
     // ── WebTransport ─────────────────────────────────────────────────
 
-    pub fn onConnectRequest(self: *Handler, s: *event_loop.Session, session_id: u64, path: []const u8, headers: []const quic.qpack.Header) void {
+    pub fn onConnectRequest(self: *Quic, s: *event_loop.Session, session_id: u64, path: []const u8, headers: []const quic.qpack.Header) void {
         const conn = self.track(s);
         const addr = wire.Address.fromSockaddr(s.entry.conn.peerAddress());
         self.host.emitRequest(.session_request, .{ .conn = conn, .id = session_id }, addr, path, headers);
     }
 
-    pub fn onSessionDraining(self: *Handler, s: *event_loop.Session, session_id: u64) void {
+    pub fn onSessionDraining(self: *Quic, s: *event_loop.Session, session_id: u64) void {
         _ = self.host.emit(.session_draining, .{ .conn = self.track(s), .id = session_id }, &.{});
     }
 
-    pub fn onSessionClosed(self: *Handler, s: *event_loop.Session, session_id: u64, code: u32, reason: []const u8, abrupt: bool) void {
+    pub fn onSessionClosed(self: *Quic, s: *event_loop.Session, session_id: u64, code: u32, reason: []const u8, abrupt: bool) void {
         var code_le: [4]u8 = undefined;
         std.mem.writeInt(u32, &code_le, code, .little);
         const flags: u8 = if (abrupt) wire.flag.abrupt else 0;
         _ = self.host.emit(.session_closed, .{ .conn = self.track(s), .id = session_id, .flags = flags }, &.{ &code_le, reason });
     }
 
-    pub fn onBidiStream(self: *Handler, s: *event_loop.Session, session_id: u64, stream_id: u64) void {
+    pub fn onBidiStream(self: *Quic, s: *event_loop.Session, session_id: u64, stream_id: u64) void {
         self.streamOpened(s, session_id, stream_id, wire.flag.bidi);
     }
 
-    pub fn onUniStream(self: *Handler, s: *event_loop.Session, session_id: u64, stream_id: u64) void {
+    pub fn onUniStream(self: *Quic, s: *event_loop.Session, session_id: u64, stream_id: u64) void {
         self.streamOpened(s, session_id, stream_id, 0);
     }
 
-    fn streamOpened(self: *Handler, s: *event_loop.Session, session_id: u64, stream_id: u64, flags: u8) void {
+    fn streamOpened(self: *Quic, s: *event_loop.Session, session_id: u64, stream_id: u64, flags: u8) void {
         var sid: [8]u8 = undefined;
         std.mem.writeInt(u64, &sid, session_id, .little);
         const pending = self.host.emit(.stream_open, .{ .conn = self.track(s), .id = stream_id, .flags = flags }, &.{&sid});
@@ -505,7 +506,7 @@ const Handler = struct {
         if (pending > max_pending_events) self.pause(s, stream_id);
     }
 
-    pub fn onStreamData(self: *Handler, s: *event_loop.Session, stream_id: u64, data: []const u8, fin: bool) void {
+    pub fn onStreamData(self: *Quic, s: *event_loop.Session, stream_id: u64, data: []const u8, fin: bool) void {
         const flags: u8 = if (fin) wire.flag.fin else 0;
         const pending = self.host.emit(.stream_data, .{ .conn = self.track(s), .id = stream_id, .flags = flags }, &.{data});
         // Copied, the data's credit goes back to the peer: past the cap, only
@@ -513,39 +514,29 @@ const Handler = struct {
         if (!fin and pending > max_pending_events) self.pause(s, stream_id);
     }
 
-    pub fn onDatagram(self: *Handler, s: *event_loop.Session, session_id: u64, data: []const u8) void {
+    pub fn onDatagram(self: *Quic, s: *event_loop.Session, session_id: u64, data: []const u8) void {
         if (self.host.pendingBytes() > max_pending_events) return;
         _ = self.host.emit(.datagram, .{ .conn = self.track(s), .id = session_id }, &.{data});
     }
 
-    pub fn onConnectionClosed(self: *Handler, s: *event_loop.Session) void {
+    pub fn onConnectionClosed(self: *Quic, s: *event_loop.Session) void {
         if (!self.conns.remove(s.id())) return;
         _ = self.host.emit(.connection_closed, .{ .conn = s.id() }, &.{});
     }
 
     // ── Commands ─────────────────────────────────────────────────────
 
-    fn runBatch(self: *Handler, batch: []const u8) void {
+    fn runBatch(self: *Quic, batch: []const u8) void {
         var r: wire.Reader = .{ .batch = batch };
         var n: u64 = 0;
         while (r.next()) |rec| : (n += 1) self.runCommand(&r, rec);
         self.host.stats.commands.add(n);
     }
 
-    fn runCommand(self: *Handler, r: *const wire.Reader, rec: wire.Record) void {
+    /// WebSocket and raw commands do nothing here: they never reach it.
+    fn runCommand(self: *Quic, r: *const wire.Reader, rec: wire.Record) void {
         const h = rec.header;
         switch (@as(wire.Command, @fromBackingInt(h.kind))) {
-            .ws_send => {
-                const ws = self.sockets.get(h.conn) orelse return;
-                const data = r.bytes(rec) orelse return;
-                const sent = if (h.flags & wire.flag.text != 0) ws.sendText(data) else ws.send(data);
-                // A dropped message would leave the peer's state wrong for good.
-                sent catch ws.close(1008, "send buffer full");
-            },
-            .ws_close => {
-                const ws = self.sockets.get(h.conn) orelse return;
-                ws.close(h.code, rec.payload);
-            },
             .session_accept => {
                 var s = self.sessionOf(h.conn) orelse return;
                 s.acceptSession(h.id) catch |err| return log.debug("accept: {any}", .{err});
@@ -594,35 +585,103 @@ const Handler = struct {
                 var s = self.sessionOf(h.conn) orelse return;
                 s.closeConnection();
             },
-            .raw_send => {
-                const raw = self.raws.getPtr(h.conn) orelse return;
-                const data = r.bytes(rec) orelse return;
-                // Closed: raw_close follows.
-                raw.conn.write(data) catch return;
-                if (h.flags & wire.flag.drain == 0) return;
-                if (raw.conn.owesDrain()) {
-                    raw.drain_wanted = true;
-                } else {
-                    _ = self.host.emit(.raw_drain, .{ .conn = h.conn }, &.{});
-                }
-            },
-            .raw_close => {
-                const raw = self.raws.get(h.conn) orelse return;
-                if (h.flags & wire.flag.abort != 0) raw.conn.abort() else raw.conn.close();
-            },
-            .raw_pause => {
-                const raw = self.raws.getPtr(h.conn) orelse return;
-                raw.js_paused = true;
-                raw.conn.pauseReading();
-            },
-            .raw_resume => {
-                const raw = self.raws.getPtr(h.conn) orelse return;
-                raw.js_paused = false;
-                if (!raw.cap_paused) raw.conn.resumeReading();
-            },
             .stop => self.stop(),
-            _ => {},
+            else => {},
         }
+    }
+};
+
+/// Both halves on the loop thread: what quic-zig's server calls when it
+/// runs the HTTP/1.1 listener too.
+const Both = struct {
+    pub const protocol: event_loop.Protocol = .webtransport;
+
+    quic: Quic,
+    tcp: Tcp(Host),
+
+    fn init(host: *Host) Both {
+        return .{ .quic = .init(host), .tcp = .{ .sink = host } };
+    }
+
+    fn deinit(self: *Both) void {
+        self.quic.deinit();
+        self.tcp.deinit();
+    }
+
+    fn stop(self: *Both) void {
+        self.quic.stop();
+    }
+
+    fn resumeReads(self: *Both) void {
+        self.quic.resumeReads();
+        self.tcp.resumeReads();
+    }
+
+    fn runBatch(self: *Both, batch: []const u8) void {
+        self.tcp.corkFor(batch);
+        defer self.tcp.uncork();
+        var r: wire.Reader = .{ .batch = batch };
+        var n: u64 = 0;
+        while (r.next()) |rec| : (n += 1) {
+            if (Tcp(Host).owns(rec.header.kind)) self.tcp.runCommand(&r, rec) else self.quic.runCommand(&r, rec);
+        }
+        self.quic.host.stats.commands.add(n);
+    }
+
+    pub fn onWsUpgrade(self: *Both, req: *event_loop.WsRequest, path: []const u8) void {
+        self.tcp.onWsUpgrade(req, path);
+    }
+    pub fn onWsMessage(self: *Both, ws: *event_loop.WsConn, data: []const u8, kind: event_loop.WsMessageKind) void {
+        self.tcp.onWsMessage(ws, data, kind);
+    }
+    pub fn onWsClose(self: *Both, ws: *event_loop.WsConn, code: u16, reason: []const u8) void {
+        self.tcp.onWsClose(ws, code, reason);
+    }
+    pub fn onRawOpen(self: *Both, raw: *event_loop.RawConn) void {
+        self.tcp.onRawOpen(raw);
+    }
+    pub fn onRawData(self: *Both, raw: *event_loop.RawConn, data: []const u8) void {
+        self.tcp.onRawData(raw, data);
+    }
+    pub fn onRawClose(self: *Both, raw: *event_loop.RawConn) void {
+        self.tcp.onRawClose(raw);
+    }
+    pub fn onRawEnd(self: *Both, raw: *event_loop.RawConn) void {
+        self.tcp.onRawEnd(raw);
+    }
+    pub fn onRawDrain(self: *Both, raw: *event_loop.RawConn) void {
+        self.tcp.onRawDrain(raw);
+    }
+    pub fn onHttpExchange(self: *Both, ex: *event_loop.HttpExchange) void {
+        self.tcp.onHttpExchange(ex);
+    }
+    pub fn onHttpExchangeGone(self: *Both, ex: *event_loop.HttpExchange) void {
+        self.tcp.onHttpExchangeGone(ex);
+    }
+
+    pub fn onConnectRequest(self: *Both, s: *event_loop.Session, session_id: u64, path: []const u8, headers: []const quic.qpack.Header) void {
+        self.quic.onConnectRequest(s, session_id, path, headers);
+    }
+    pub fn onSessionDraining(self: *Both, s: *event_loop.Session, session_id: u64) void {
+        self.quic.onSessionDraining(s, session_id);
+    }
+    pub fn onSessionClosed(self: *Both, s: *event_loop.Session, session_id: u64, code: u32, reason: []const u8, abrupt: bool) void {
+        self.quic.onSessionClosed(s, session_id, code, reason, abrupt);
+    }
+    pub fn onBidiStream(self: *Both, s: *event_loop.Session, session_id: u64, stream_id: u64) void {
+        self.quic.onBidiStream(s, session_id, stream_id);
+    }
+    pub fn onUniStream(self: *Both, s: *event_loop.Session, session_id: u64, stream_id: u64) void {
+        self.quic.onUniStream(s, session_id, stream_id);
+    }
+    pub fn onStreamData(self: *Both, s: *event_loop.Session, stream_id: u64, data: []const u8, fin: bool) void {
+        self.quic.onStreamData(s, stream_id, data, fin);
+    }
+    pub fn onDatagram(self: *Both, s: *event_loop.Session, session_id: u64, data: []const u8) void {
+        self.quic.onDatagram(s, session_id, data);
+    }
+    pub fn onConnectionClosed(self: *Both, s: *event_loop.Session) void {
+        self.quic.onConnectionClosed(s);
     }
 };
 
