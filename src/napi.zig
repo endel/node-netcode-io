@@ -86,6 +86,7 @@ pub extern fn napi_create_object(env: Env, result: *Value) Status;
 pub extern fn napi_get_undefined(env: Env, result: *Value) Status;
 pub extern fn napi_throw_error(env: Env, code: ?[*:0]const u8, msg: [*:0]const u8) Status;
 pub extern fn napi_create_external(env: Env, data: ?*anyopaque, finalize: ?Finalize, hint: ?*anyopaque, result: *Value) Status;
+pub extern fn napi_create_external_buffer(env: Env, len: usize, data: ?*anyopaque, finalize: ?Finalize, hint: ?*anyopaque, result: *Value) Status;
 pub extern fn napi_get_value_external(env: Env, value: Value, result: *?*anyopaque) Status;
 pub extern fn napi_call_function(env: Env, recv: Value, func: Value, argc: usize, argv: [*]const Value, result: ?*Value) Status;
 pub extern fn napi_create_string_utf8(env: Env, str: [*]const u8, len: usize, result: *Value) Status;

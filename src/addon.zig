@@ -49,6 +49,7 @@ export fn napi_register_module_v1(env: napi.Env, exports: napi.Value) callconv(.
     define(env, exports, "listen", jsListen) catch return null;
     define(env, exports, "submit", jsSubmit) catch return null;
     define(env, exports, "send", jsSend) catch return null;
+    define(env, exports, "readBuffer", jsReadBuffer) catch return null;
     define(env, exports, "port", jsPort) catch return null;
     define(env, exports, "ref", jsRef) catch return null;
     define(env, exports, "stats", jsStats) catch return null;
@@ -404,6 +405,15 @@ fn jsRef(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     _ = if (keep) napi.napi_ref_threadsafe_function(env, b.tsfn) else napi.napi_unref_threadsafe_function(env, b.tsfn);
     if (b.local) |local| local.ref(keep);
     return null;
+}
+
+/// quic-zig's read buffer on this thread, which `flag.read` messages are
+/// views of: one Buffer over it, made once, never freed while JS holds it.
+fn jsReadBuffer(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
+    const argv = args(env, info, 1);
+    const b = bindingOf(env, argv[0]) orelse return throw(env, "readBuffer: not a server handle");
+    const local = b.local orelse return null;
+    return local.readBuffer();
 }
 
 fn jsStats(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {

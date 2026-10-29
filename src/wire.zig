@@ -123,6 +123,9 @@ pub const flag = struct {
     /// ws_message, raw_data: the payload is a Buffer of its own, the next
     /// in the delivery's second argument.
     pub const side: u8 = 8;
+    /// ws_message: the payload is u32 offset, u32 length of bytes in
+    /// quic-zig's read buffer (`readBuffer`), valid during this call only.
+    pub const read: u8 = 16;
 };
 
 pub const Header = struct {

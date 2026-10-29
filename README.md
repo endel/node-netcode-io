@@ -89,7 +89,9 @@ each record a 24-byte header and a payload (`src/wire.zig`, mirrored in
   events are written straight into one Buffer reused for every batch, as
   uWebSockets.js lends its messages: a message is valid only during its
   `onWsMessage` call, copied once on its way in, and nothing is allocated
-  per delivery for the garbage collector to reclaim. Each `onHttpRequest` request ends a call
+  per delivery for the garbage collector to reclaim. On Linux a message of
+  32 KiB or more isn't copied at all: JS gets a view of quic-zig's read
+  buffer, in a call of its own before the next read. Each `onHttpRequest` request ends a call
   into JS, so the microtasks it starts run before the next one, as
   between an `http.Server`'s 'request' events.
 

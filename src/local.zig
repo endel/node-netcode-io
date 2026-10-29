@@ -60,8 +60,15 @@ pub const Local = struct {
     side: ?napi.Value = null,
     side_len: u32 = 0,
     side_bytes: usize = 0,
-    /// When `events`' oldest arrived, during `pump`.
+    /// A Buffer over quic-zig's read buffer, for `flag.read` messages.
+    read_buf: ?napi.Ref = null,
+    /// When `events`' second arrived, during `pump`.
     first_ns: i64 = 0,
+    /// Events this pump queued since JS last took them.
+    pump_events: u32 = 0,
+    /// From the loop's run to the last delivery: `pump` arms the timer
+    /// itself once that's done, so what JS submits meanwhile needn't.
+    in_pump: bool = false,
     /// A batch's QUIC commands, bound for the loop thread.
     forward: std.ArrayList(u8) = .empty,
     /// Where bytes a reference points at went in `forward`, by their place
@@ -160,6 +167,8 @@ pub const Local = struct {
         };
         self.pumping = scoped;
         self.first_ns = 0;
+        self.pump_events = 0;
+        self.in_pump = true;
         if (scoped) self.startDirect();
         self.loop.run(.no_wait) catch |err| log.err("event loop: {any}", .{err});
         self.pumping = false;
@@ -167,6 +176,7 @@ pub const Local = struct {
         if (scoped) self.deliver();
         self.direct_on = false;
         self.direct = .empty;
+        self.in_pump = false;
         self.armTimer();
     }
 
@@ -256,6 +266,7 @@ pub const Local = struct {
         self.pumping = false;
         defer self.pumping = true;
         self.deliver();
+        self.pump_events = 0;
     }
 
     /// Microtasks run on the way out: the batch JS answers with arrives in
@@ -295,7 +306,10 @@ pub const Local = struct {
         h.kind = @backingInt(kind);
         self.host.stats.events.add(1);
         defer if (self.pumping) self.deliverIfOld();
-        if (self.pumping and !self.transient and (kind == .ws_message or kind == .raw_data) and self.toSide(parts)) {
+        if (self.pumping and self.transient and kind == .ws_message and parts.len == 1 and self.lendsRead(h, parts[0])) {
+            // Taken before the loop's next read reuses the buffer.
+            self.deliverEarly();
+        } else if (self.pumping and !self.transient and (kind == .ws_message or kind == .raw_data) and self.toSide(parts)) {
             h.flags |= wire.flag.side;
             wire.append(gpa, &self.events, h, &.{}) catch |err| log.err("dropped an event: {any}", .{err});
         } else {
@@ -304,6 +318,40 @@ pub const Local = struct {
             wire.append(gpa, self.out(n), h, parts) catch |err| log.err("dropped an event: {any}", .{err});
         }
         return self.events.items.len + self.direct.items.len + self.side_bytes;
+    }
+
+    /// A large message quic-zig parsed in place goes to JS as a view of its
+    /// read buffer: copying it costs more than the JS call delivering it at
+    /// once adds.
+    fn lendsRead(self: *Local, header: wire.Header, data: []const u8) bool {
+        if (data.len < read_lend_min) return false;
+        const rb = http1.sharedReadBuffer() orelse return false;
+        const at = @intFromPtr(data.ptr);
+        const base = @intFromPtr(rb.ptr);
+        if (at < base or at + data.len > base + rb.len) return false;
+        var h = header;
+        h.flags |= wire.flag.read;
+        var payload: [8]u8 = undefined;
+        std.mem.writeInt(u32, payload[0..4], @intCast(at - base), .little);
+        std.mem.writeInt(u32, payload[4..8], @intCast(data.len), .little);
+        wire.append(gpa, self.out(wire.header_len + payload.len), h, &.{&payload}) catch |err| {
+            log.err("dropped an event: {any}", .{err});
+            return true;
+        };
+        return true;
+    }
+
+    pub fn readBuffer(self: *Local) ?napi.Value {
+        const rb = http1.sharedReadBuffer() orelse return null;
+        var buf: ?napi.Value = null;
+        if (self.read_buf) |r| {
+            if (napi.napi_get_reference_value(self.env, r, &buf) == .ok and buf != null) return buf;
+        }
+        var made: napi.Value = undefined;
+        if (napi.napi_create_external_buffer(self.env, rb.len, rb.ptr, null, null, &made) != .ok) return null;
+        var held: napi.Ref = undefined;
+        if (napi.napi_create_reference(self.env, made, 1, &held) == .ok) self.read_buf = held;
+        return made;
     }
 
     /// Where an event of `n` bytes goes: `direct` while pumping, with room,
@@ -334,14 +382,16 @@ pub const Local = struct {
         self.direct_on = true;
     }
 
-    /// The first event a pump queues starts the clock; one queued
+    /// A pump's second event starts the clock; one queued
     /// `deliver_after_ns` later has JS take them all.
     fn deliverIfOld(self: *Local) void {
+        // A lone event reads no clock: the pump hands it over anyway.
+        self.pump_events += 1;
+        if (self.pump_events < 2) return;
         const now = quic.sys.nanoTimestamp();
-        if (self.first_ns == 0) {
+        if (self.pump_events == 2) {
             self.first_ns = now;
         } else if (now - self.first_ns >= deliver_after_ns) {
-            self.first_ns = 0;
             self.deliverEarly();
         }
     }
@@ -428,7 +478,7 @@ pub const Local = struct {
         self.host.stats.command_bytes += batch.len;
         // Last, after the uncork: a write the kernel didn't take, or a
         // close, left work on the loop.
-        defer self.armTimer();
+        defer if (!self.in_pump) self.armTimer();
         self.tcp.corkFor(batch);
         defer self.tcp.uncork();
         var r: wire.Reader = .{ .batch = batch };
@@ -463,7 +513,7 @@ pub const Local = struct {
         const r: wire.Reader = .{ .batch = data };
         self.tcp.runCommand(&r, rec);
         // A write the kernel didn't take left work on the loop.
-        self.armTimer();
+        if (!self.in_pump) self.armTimer();
     }
 
     fn forwardCommand(self: *Local, r: *const wire.Reader, rec: wire.Record) !void {
@@ -504,6 +554,7 @@ pub const Local = struct {
         self.forward.deinit(gpa);
         self.moved.deinit(gpa);
         if (self.lent) |r| _ = napi.napi_delete_reference(self.env, r);
+        if (self.read_buf) |r| _ = napi.napi_delete_reference(self.env, r);
         _ = napi.napi_delete_reference(self.env, self.on_events);
         _ = napi.napi_async_destroy(self.env, self.async_ctx);
         uv.uv_close(self.poll, onClosed);
@@ -539,6 +590,10 @@ const side_min = 32 * 1024;
 const deliver_after_ns = 20 * std.time.ns_per_us;
 
 const min_lent = 64 * 1024;
+
+/// From here on a message quic-zig parsed in place is lent, not copied:
+/// below, the copy costs less than the JS call delivering it at once.
+const read_lend_min = 32 * 1024;
 
 /// The most a `lent` Buffer grows to.
 const max_lent = 4 * 1024 * 1024;
