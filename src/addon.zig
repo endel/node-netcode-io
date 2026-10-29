@@ -2,7 +2,7 @@
 //! the JS thread:
 //!
 //!   listen(options, onEvents) -> handle   binds, starts the loop thread
-//!   submit(handle, Uint8Array)            queues a command batch
+//!   submit(handle, Uint8Array, len?)      queues a command batch: its first `len` bytes
 //!   port(handle) -> number                the bound UDP port
 //!   ref(handle, bool)                     whether the server keeps Node alive
 //!   stats(handle) -> object               counters, for tuning
@@ -256,7 +256,7 @@ fn onEnvExit(ctx: ?*anyopaque) callconv(.c) void {
 // ── Commands ─────────────────────────────────────────────────────────
 
 fn jsSubmit(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
-    const argv = args(env, info, 2);
+    const argv = args(env, info, 3);
     const b = bindingOf(env, argv[0]) orelse return throw(env, "submit: not a server handle");
     const host = b.host orelse return null;
     const batch = argv[1] orelse return throw(env, "submit: batch missing");
@@ -268,6 +268,12 @@ fn jsSubmit(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
     var data: ?*anyopaque = null;
     if (napi.napi_get_typedarray_info(env, batch, &kind, &len, &data, null, null) != .ok) return null;
     if (kind != 1) return throw(env, "submit: batch must be a Uint8Array");
+    // a length, so JS needn't make a subarray of its batch buffer each turn
+    if (argv[2]) |v| {
+        var n: u32 = 0;
+        if (napi.napi_get_value_uint32(env, v, &n) != .ok or n > len) return throw(env, "submit: bad length");
+        len = n;
+    }
     if (len == 0) return null;
     host.submit(@as([*]const u8, @ptrCast(data.?))[0..len]) catch return throw(env, "out of memory");
     return null;

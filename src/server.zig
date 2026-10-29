@@ -26,6 +26,10 @@ const log = std.log.scoped(.netcode_io);
 /// taken the batch.
 const max_pending_events = 8 << 20;
 
+/// Events in one tick past which JS is woken before the tick ends, so a
+/// long one doesn't leave it idle.
+const early_notify = 32;
+
 pub const Server = event_loop.Server(Handler);
 
 /// What crossed between the threads, and how often each woke the other:
@@ -79,6 +83,10 @@ pub const Host = struct {
     /// counts from its own batch's start, and several may queue up.
     command_ends: std.ArrayList(usize) = .empty,
     commands_pending: bool = false,
+    /// The loop may block, so a submit must wake it. False from a tick's
+    /// first callback to its end, where the loop looks for commands itself:
+    /// once a completion has run, libxev's tick doesn't block again.
+    asleep: bool = true,
     /// Reads were paused for JS; its next take resumes them.
     paused_any: bool = false,
     resume_wanted: bool = false,
@@ -89,6 +97,9 @@ pub const Host = struct {
     running_ends: std.ArrayList(usize) = .empty,
     /// The JS thread's: the event batch being handed over.
     taken: std.ArrayList(u8) = .empty,
+    /// The loop thread's: events JS is yet to be woken for. The end of the
+    /// tick wakes it once, however many sockets were ready in it.
+    owed: u32 = 0,
 
     stats: Stats = .{},
 
@@ -144,11 +155,20 @@ pub const Host = struct {
     fn run(self: *Host) void {
         nameThread("netcode-io");
         self.server.start();
-        self.wake.wait(self.server.eventLoop(), &self.wake_c, Host, self, onWake);
-        self.server.eventLoop().run(.until_done) catch |err| log.err("event loop: {any}", .{err});
+        const loop = self.server.eventLoop();
+        self.wake.wait(loop, &self.wake_c, Host, self, onWake);
+        // `wake` always rearms, so only the server's stop ends the loop.
+        while (!loop.stopped()) {
+            loop.run(.once) catch |err| {
+                log.err("event loop: {any}", .{err});
+                break;
+            };
+            self.endTick();
+        }
         self.handler.deinit();
         self.server.deinit();
         _ = self.emit(.stopped, .{}, &.{});
+        self.wakeJs();
     }
 
     /// JS thread. Copies `batch` into the command queue.
@@ -167,8 +187,9 @@ pub const Host = struct {
         };
         self.command_ends.appendAssumeCapacity(self.commands.items.len);
         self.commands_pending = true;
+        const wake = !was and self.asleep;
         self.lock.unlock();
-        if (!was) self.wake.notify() catch {};
+        if (wake) self.wake.notify() catch {};
     }
 
     /// JS thread. The events since the last take, valid until the next.
@@ -218,7 +239,31 @@ pub const Host = struct {
         const self = self_opt.?;
         _ = r catch return .rearm;
         self.stats.wakes.add(1);
+        self.runCommands();
+        // Even stopping: the server ends the loop itself once it's done.
+        return .rearm;
+    }
+
+    /// Loop thread, after each tick: wakes JS for the tick's events, and
+    /// runs what JS submitted meanwhile without waking us.
+    fn endTick(self: *Host) void {
+        self.wakeJs();
+        while (true) {
+            self.lock.lock();
+            if (!self.commands_pending) {
+                self.asleep = true;
+                self.lock.unlock();
+                return;
+            }
+            self.lock.unlock();
+            self.runCommands();
+            self.wakeJs();
+        }
+    }
+
+    fn runCommands(self: *Host) void {
         self.lock.lock();
+        self.asleep = false;
         std.mem.swap(std.ArrayList(u8), &self.running, &self.commands);
         std.mem.swap(std.ArrayList(usize), &self.running_ends, &self.command_ends);
         self.commands_pending = false;
@@ -240,8 +285,6 @@ pub const Host = struct {
         self.running_ends.clearRetainingCapacity();
         if (quit) self.handler.stop();
         self.server.flush();
-        // Even stopping: the server ends the loop itself once it's done.
-        return .rearm;
     }
 
     /// Loop thread. Returns the bytes now waiting for JS.
@@ -250,6 +293,7 @@ pub const Host = struct {
         h.kind = @backingInt(kind);
         self.stats.events.add(1);
         self.lock.lock();
+        self.asleep = false;
         wire.append(gpa, &self.events, h, parts) catch |err| log.err("dropped an event: {any}", .{err});
         return self.signal();
     }
@@ -259,6 +303,7 @@ pub const Host = struct {
         h.kind = @backingInt(kind);
         self.stats.events.add(1);
         self.lock.lock();
+        self.asleep = false;
         wire.Request.append(gpa, &self.events, h, addr, path, headers) catch |err| log.err("dropped an event: {any}", .{err});
         _ = self.signal();
     }
@@ -269,11 +314,18 @@ pub const Host = struct {
         self.events_pending = true;
         const waiting = self.events.items.len;
         self.lock.unlock();
-        if (!was) {
-            self.stats.notifies.add(1);
-            self.notify(self.notify_ctx);
-        }
+        // `was` with nothing owed: JS is woken already, and takes these too.
+        if (!was or self.owed > 0) self.owed += 1;
+        if (self.owed >= early_notify) self.wakeJs();
         return waiting;
+    }
+
+    /// Loop thread.
+    fn wakeJs(self: *Host) void {
+        if (self.owed == 0) return;
+        self.owed = 0;
+        self.stats.notifies.add(1);
+        self.notify(self.notify_ctx);
     }
 
     fn pendingBytes(self: *Host) usize {
