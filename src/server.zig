@@ -47,14 +47,18 @@ pub const Host = struct {
     events: std.ArrayList(u8) = .empty,
     events_pending: bool = false,
     commands: std.ArrayList(u8) = .empty,
+    /// Where each submitted batch in `commands` ends: a reference's offset
+    /// counts from its own batch's start, and several may queue up.
+    command_ends: std.ArrayList(usize) = .empty,
     commands_pending: bool = false,
     /// Reads were paused for JS; its next take resumes them.
     paused_any: bool = false,
     resume_wanted: bool = false,
     quit: bool = false,
 
-    /// The loop thread's: the command batch being run.
+    /// The loop thread's: the command batches being run, and their ends.
     running: std.ArrayList(u8) = .empty,
+    running_ends: std.ArrayList(usize) = .empty,
     /// The JS thread's: the event batch being handed over.
     taken: std.ArrayList(u8) = .empty,
 
@@ -113,10 +117,15 @@ pub const Host = struct {
     pub fn submit(self: *Host, batch: []const u8) !void {
         self.lock.lock();
         const was = self.commands_pending;
+        self.command_ends.ensureUnusedCapacity(gpa, 1) catch |err| {
+            self.lock.unlock();
+            return err;
+        };
         self.commands.appendSlice(gpa, batch) catch |err| {
             self.lock.unlock();
             return err;
         };
+        self.command_ends.appendAssumeCapacity(self.commands.items.len);
         self.commands_pending = true;
         self.lock.unlock();
         if (!was) self.wake.notify() catch {};
@@ -153,7 +162,9 @@ pub const Host = struct {
         }
         self.events.deinit(gpa);
         self.commands.deinit(gpa);
+        self.command_ends.deinit(gpa);
         self.running.deinit(gpa);
+        self.running_ends.deinit(gpa);
         self.taken.deinit(gpa);
         self.arena.deinit();
         gpa.destroy(self);
@@ -164,6 +175,7 @@ pub const Host = struct {
         _ = r catch return .rearm;
         self.lock.lock();
         std.mem.swap(std.ArrayList(u8), &self.running, &self.commands);
+        std.mem.swap(std.ArrayList(usize), &self.running_ends, &self.command_ends);
         self.commands_pending = false;
         const resume_reads = self.resume_wanted;
         if (resume_reads) {
@@ -174,8 +186,13 @@ pub const Host = struct {
         self.lock.unlock();
 
         if (resume_reads) self.handler.resumeReads();
-        self.handler.runBatch(self.running.items);
+        var start: usize = 0;
+        for (self.running_ends.items) |end| {
+            self.handler.runBatch(self.running.items[start..end]);
+            start = end;
+        }
         self.running.clearRetainingCapacity();
+        self.running_ends.clearRetainingCapacity();
         if (quit) self.handler.stop();
         self.server.flush();
         // Even stopping: the server ends the loop itself once it's done.

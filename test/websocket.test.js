@@ -120,3 +120,30 @@ test('a port in use throws from the constructor', (t) => {
   assert.throws(() => new Server({ ...options, port: a.port }), /listen failed/);
   return a.stop();
 });
+
+test('a buffer sent twice still arrives right when its turn spans several batches', async (t) => {
+  // Past 1 MiB a turn's commands go out in more than one batch, and the loop
+  // thread may take two at once: the second's references must still resolve
+  // within that batch.
+  const ids = [];
+  const server = new Server(options, { onWsOpen(id) { ids.push(id); } });
+  t.after(() => server.stop());
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    ids.length = 0;
+    const [big, a, b] = await Promise.all([1, 2, 3].map(() => open(`ws://127.0.0.1:${server.port}/`)));
+    while (ids.length < 3) { await new Promise((r) => setTimeout(r, 5)); }
+
+    const shared = new Uint8Array(100).map((_, i) => (i * 7 + attempt) & 0xff);
+    const got = [next(a), next(b)];
+    for (let i = 0; i < 40; i++) { server.send(ids[0], new Uint8Array(64 * 1024).fill(i)); }
+    server.send(ids[1], shared);
+    server.send(ids[2], shared);
+    for (const data of await Promise.all(got)) {
+      assert.deepStrictEqual(new Uint8Array(data), shared, `attempt ${attempt}`);
+    }
+    [big, a, b].forEach((ws) => ws.close());
+  }
+
+  await server.stop();
+});
