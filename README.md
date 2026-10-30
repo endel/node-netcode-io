@@ -149,22 +149,39 @@ netcode-io takes:
 With one message in flight per client, netcode-io answers 136k messages a
 second to uWebSockets.js's 101k (1.35×), and at 16 KiB 83k to its 70k (1.2×).
 
-Round trip at the client, p50 / p99 in ms:
+Round trip at the client, median (p50):
 
-| | netcode-io | uWebSockets.js |
-|---|---:|---:|
-| Echo, 500 clients × 20/s | 0.085 / 0.124 | 0.078 / 0.154 |
-| Echo, 2,000 clients × 20/s | 0.253 / 0.520 | 0.314 / 0.821 |
-| Echo, 500 clients, one in flight each | 3.64 / 3.92 | 4.95 / 5.21 |
-| Echo, 2,000 clients × 20/s, TLS | 0.262 / 0.506 | 0.473 / 1.13 |
-| Broadcast, 32 rooms of 32, 4/s each | 0.744 / 2.05 | 0.911 / 2.82 |
-| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 0.416 / 1.60 | 2.7 s / 7.0 s |
-| 1 KiB, 500 clients × 20/s | 0.077 / 0.167 | 0.075 / 0.200 |
-| 16 KiB, 200 clients × 20/s | 0.088 / 0.129 | 0.083 / 0.133 |
-| 16 KiB, 200 clients × 20/s, TLS | 0.178 / 0.374 | 0.178 / 0.454 |
-| 64 KiB, 50 clients × 20/s | 0.165 / 0.241 | 0.158 / 0.228 |
-| 64 KiB, 50 clients × 20/s, TLS | 0.260 / 0.448 | 0.303 / 0.603 |
-| 16 KiB, 50 clients, one in flight each | 0.541 / 1.13 | 0.670 / 1.37 |
+| | netcode-io | uWebSockets.js | Faster |
+|---|---:|---:|---:|
+| Echo, 500 clients × 20/s | 0.085 ms | 0.078 ms | 0.92× |
+| Echo, 2,000 clients × 20/s | 0.253 ms | 0.314 ms | 1.24× |
+| Echo, 500 clients, one in flight each | 3.64 ms | 4.95 ms | 1.36× |
+| Echo, 2,000 clients × 20/s, TLS | 0.262 ms | 0.473 ms | 1.81× |
+| Broadcast, 32 rooms of 32, 4/s each | 0.744 ms | 0.911 ms | 1.22× |
+| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 0.416 ms | 2.7 s | uWebSockets.js falls behind |
+| 1 KiB, 500 clients × 20/s | 0.077 ms | 0.075 ms | 0.97× |
+| 16 KiB, 200 clients × 20/s | 0.088 ms | 0.083 ms | 0.94× |
+| 16 KiB, 200 clients × 20/s, TLS | 0.178 ms | 0.178 ms | 1.00× |
+| 64 KiB, 50 clients × 20/s | 0.165 ms | 0.158 ms | 0.96× |
+| 64 KiB, 50 clients × 20/s, TLS | 0.260 ms | 0.303 ms | 1.17× |
+| 16 KiB, 50 clients, one in flight each | 0.541 ms | 0.670 ms | 1.24× |
+
+And at the 99th percentile (p99):
+
+| | netcode-io | uWebSockets.js | Faster |
+|---|---:|---:|---:|
+| Echo, 500 clients × 20/s | 0.124 ms | 0.154 ms | 1.24× |
+| Echo, 2,000 clients × 20/s | 0.520 ms | 0.821 ms | 1.58× |
+| Echo, 500 clients, one in flight each | 3.92 ms | 5.21 ms | 1.33× |
+| Echo, 2,000 clients × 20/s, TLS | 0.506 ms | 1.13 ms | 2.24× |
+| Broadcast, 32 rooms of 32, 4/s each | 2.05 ms | 2.82 ms | 1.37× |
+| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 1.60 ms | 7.0 s | uWebSockets.js falls behind |
+| 1 KiB, 500 clients × 20/s | 0.167 ms | 0.200 ms | 1.20× |
+| 16 KiB, 200 clients × 20/s | 0.129 ms | 0.133 ms | 1.03× |
+| 16 KiB, 200 clients × 20/s, TLS | 0.374 ms | 0.454 ms | 1.21× |
+| 64 KiB, 50 clients × 20/s | 0.241 ms | 0.228 ms | 0.95× |
+| 64 KiB, 50 clients × 20/s, TLS | 0.448 ms | 0.603 ms | 1.35× |
+| 16 KiB, 50 clients, one in flight each | 1.13 ms | 1.37 ms | 1.21× |
 
 A broadcast of three messages to each member leaves each socket in one write
 here, where uWebSockets.js makes three, and at this rate falls behind. At
@@ -173,15 +190,15 @@ server varies by from run to run, and its p99 is lower in every row but
 64 KiB. One connection at 200 messages a second takes 31 µs there and back
 on both.
 
-Held connections, each sending a 50-byte message a second, netcode-io /
-uWebSockets.js, mean of 2 rounds:
+Held connections, each sending a 50-byte message a second, netcode-io vs
+uWebSockets.js (mean of 2 rounds):
 
-| Connections | CPU per message | p99 | Memory per connection |
-|---|---:|---:|---:|
-| 10,000 | 14.2 / 16.3 µs | 0.23 / 0.28 ms | 2.0 / 1.3 KB |
-| 25,000 | 13.1 / 14.9 µs | 0.55 / 0.65 ms | 1.5 / 0.9 KB |
-| 50,000 | 12.8 / 15.6 µs | 0.77 / 1.12 ms | 1.3 / 0.7 KB |
-| 100,000 | 9.8 / 9.9 µs | 1.37 / 1.74 s | 1.3 / 0.6 KB |
+| Connections | CPU per message | Less CPU | p99 | Faster | Memory per connection | Less memory |
+|---|---:|---:|---:|---:|---:|---:|
+| 10,000 | 14.2 vs 16.3 µs | 1.15× | 0.23 vs 0.28 ms | 1.22× | 2.0 vs 1.4 KB | 0.68× |
+| 25,000 | 13.1 vs 14.9 µs | 1.14× | 0.55 vs 0.65 ms | 1.19× | 1.5 vs 0.9 KB | 0.60× |
+| 50,000 | 12.8 vs 15.6 µs | 1.21× | 0.77 vs 1.12 ms | 1.45× | 1.3 vs 0.7 KB | 0.54× |
+| 100,000 | 9.8 vs 9.9 µs | 1.01× | 1.37 vs 1.74 s | 1.27× | 1.3 vs 0.6 KB | 0.46× |
 
 Both hold 100,000. Near 100,000 messages a second both run a full core, and
 latency there is queueing. netcode-io takes about twice the memory per
@@ -189,8 +206,8 @@ connection. Its first 100,000 round lost one connection to the box's
 firewall, whose connection-tracking table was full of the run before
 (`nf_conntrack: table full, dropping packet`); the row is the second.
 
-`bench/run.mjs` reproduces the first two tables (`--transports uws,netcode`;
-`netcode-kept` adds the default mode).
+`bench/run.mjs` reproduces the CPU and latency tables (`--transports
+uws,netcode`; `netcode-kept` adds the default mode).
 
 ## Building
 
