@@ -6,11 +6,20 @@
     "type": "git",
     "url": "git+https://github.com/endel/node-netcode-io.git"
   },
+  "homepage": "https://github.com/endel/node-netcode-io#readme",
+  "bugs": {
+    "url": "https://github.com/endel/node-netcode-io/issues"
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
+  "optionalDependencies": {
+    "netcode-io-darwin-arm64": "0.0.1",
+    "netcode-io-linux-arm64": "0.0.1",
+    "netcode-io-linux-x64": "0.0.1"
+  },
   "scripts": {
     "build": "zig build -Doptimize=ReleaseFast",
     "test": "zig build test && node --test --test-timeout=20000 test/*.test.js && NETCODE_IO_THREAD=quic node --test --test-timeout=20000 test/*.test.js"

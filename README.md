@@ -3,6 +3,14 @@
 WebSocket and WebTransport on one port for Node.js, served by
 [quic-zig](https://github.com/endel/quic-zig) through Node-API.
 
+```sh
+npm install netcode-io
+```
+
+Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later) and macOS on
+Apple silicon. The x64 build needs x86-64-v3 with AES-NI, which servers have
+had since 2013. Other platforms build from source (below).
+
 ```js
 const { Server } = require('netcode-io');
 
@@ -106,12 +114,17 @@ other; `bench/` compares both modes with uWebSockets.js.
 Zig 0.17, with quic-zig checked out beside this repo (`../quic-zig`):
 
 ```sh
-zig build            # zig-out/lib/netcode_io.node, zig-out/bin/wt-test-client
-npm test             # Zig wire tests, then node --test with each websocket.thread
+git clone https://github.com/endel/quic-zig
+git clone https://github.com/endel/node-netcode-io
+cd node-netcode-io
+zig build -Doptimize=ReleaseFast   # zig-out/lib/netcode_io.node, zig-out/bin/wt-test-client
+npm test                           # Zig wire tests, then node --test with each websocket.thread
 ```
 
 `lib/binding.js` loads `zig-out/lib/netcode_io.node` when it exists, and
-otherwise `netcode-io-<platform>-<arch>`.
+otherwise `netcode-io-<platform>-<arch>`, the package npm installed for this
+machine. A `v*` tag builds those on each platform, tests them and publishes
+them (`.github/workflows/release.yml`).
 
 ## Not yet
 
@@ -126,4 +139,9 @@ otherwise `netcode-io-<platform>-<arch>`.
 - Listening on a Unix socket, as uWebSockets.js's `listen_unix` does: behind
   a proxy that forwards over one (Colyseus Cloud's nginx), WebSockets can't
   be served. WebTransport needs its UDP port reachable directly anyway.
-- Windows; prebuilt packages.
+- Windows. Prebuilt packages for Intel Macs and musl Linux (Alpine): those
+  build from source.
+
+## License
+
+MIT

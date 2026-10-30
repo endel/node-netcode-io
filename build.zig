@@ -3,6 +3,8 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    // Releases ship without debug info: 11 of a ReleaseFast addon's 13 MB.
+    const strip = b.option(bool, "strip", "Omit the addon's debug info");
 
     const quic_dep = b.dependency("quic", .{ .target = target, .optimize = optimize });
     const quic_mod = quic_dep.module("quic");
@@ -14,6 +16,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/addon.zig"),
             .target = target,
             .optimize = optimize,
+            .strip = strip,
             .link_libc = true,
             .imports = &.{.{ .name = "quic", .module = quic_mod }},
         }),

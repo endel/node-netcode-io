@@ -1,0 +1,92 @@
+name: Release
+
+# On a version tag: each platform's addon built on that platform, tested,
+# and published beside the package that loads it. Publishing needs an
+# NPM_TOKEN secret; without one the packages are left as an artifact.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.pkg }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # AES-NI and PCLMUL aren't in x86-64-v3: without them TLS and QUIC
+          # fall back to software crypto, ~35x slower
+          - { os: ubuntu-latest, pkg: linux-x64, target: x86_64-linux-gnu.2.28, cpu: x86_64_v3+aes+pclmul }
+          - { os: ubuntu-24.04-arm, pkg: linux-arm64, target: aarch64-linux-gnu.2.28, cpu: generic+aes+sha2 }
+          - { os: macos-latest, pkg: darwin-arm64, target: aarch64-macos.13.0, cpu: apple_m1 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: netcode-io
+
+      - uses: actions/checkout@v4
+        with:
+          repository: endel/quic-zig
+          path: quic-zig
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build
+        working-directory: netcode-io
+        run: zig build -Doptimize=ReleaseFast -Dstrip -Dtarget=${{ matrix.target }} -Dcpu=${{ matrix.cpu }}
+
+      # the tests load zig-out's addon: the binary that ships
+      - name: Test
+        working-directory: netcode-io
+        run: npm test
+
+      - name: Record the quic-zig it was built from
+        run: git -C quic-zig rev-parse HEAD > netcode-io/zig-out/lib/quic-zig.rev
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.pkg }}
+          path: |
+            netcode-io/zig-out/lib/netcode_io.node
+            netcode-io/zig-out/lib/quic-zig.rev
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Stage the platform packages
+        run: node scripts/stage.mjs artifacts dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: dist
+
+      # platform packages first: the main one depends on them
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v') && env.NODE_AUTH_TOKEN != ''
+        run: |
+          for d in dist/*/; do npm publish "$d" --access public; done
+          npm publish --access public
