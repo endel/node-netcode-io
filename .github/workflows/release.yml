@@ -1,16 +1,37 @@
 name: Release
 
-# On a version tag: each platform's addon built on that platform, tested,
-# and published beside the package that loads it. Publishing needs an
-# NPM_TOKEN secret; without one the packages are left as an artifact.
+# When main's package.json has a version npm doesn't: each platform's addon
+# built on that platform, tested, and published beside the package that
+# loads it, then the commit tagged. Publishing needs an NPM_TOKEN secret;
+# without one the packages are left as an artifact. Dispatched by hand, it
+# retries a release that failed, or stops at that artifact for a version
+# npm has.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['package.json']
   workflow_dispatch:
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      new: ${{ steps.check.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: check
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # empty when npm hasn't it: npm view then fails with E404
+          [ -n "$(npm view "netcode-io@$version" version 2>/dev/null)" ] || echo "new=true" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.pkg }}
+    needs: version
+    if: needs.version.outputs.new == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -60,10 +81,14 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      VERSION: ${{ needs.version.outputs.version }}
+      PUBLISH: ${{ needs.version.outputs.new == 'true' && github.ref == 'refs/heads/main' && secrets.NPM_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -84,9 +109,19 @@ jobs:
           name: packages
           path: dist
 
-      # platform packages first: the main one depends on them
+      # Platform packages first: the main one depends on them. What npm has
+      # is skipped, as a version can't be published twice: a run that failed
+      # partway can go again.
       - name: Publish
-        if: startsWith(github.ref, 'refs/tags/v') && env.NODE_AUTH_TOKEN != ''
+        if: env.PUBLISH == 'true'
         run: |
-          for d in dist/*/; do npm publish "$d" --access public; done
-          npm publish --access public
+          for d in dist/*/ .; do
+            name=$(node -p "require('./$d/package.json').name")
+            [ -n "$(npm view "$name@$VERSION" version 2>/dev/null)" ] || npm publish "$d" --access public
+          done
+
+      - name: Tag the commit
+        if: env.PUBLISH == 'true'
+        run: |
+          git tag "v$VERSION"
+          git push origin "v$VERSION"

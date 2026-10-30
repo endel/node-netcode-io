@@ -240,8 +240,9 @@ npm test                           # Zig wire tests, then node --test with each 
 
 `lib/binding.js` loads `zig-out/lib/netcode_io.node` when it exists, and
 otherwise `netcode-io-<platform>-<arch>`, the package npm installed for this
-machine. A `v*` tag builds those on each platform, tests them and publishes
-them (`.github/workflows/release.yml`).
+machine. A new `version` in `package.json` on main, with its
+`optionalDependencies` to match, builds those on each platform, tests them,
+publishes them and tags the commit (`.github/workflows/release.yml`).
 
 ## Not yet
 
