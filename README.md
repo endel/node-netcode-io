@@ -121,47 +121,51 @@ deep C-states off: Ubuntu 24.04, Node.js 22.19, uWebSockets.js 20.52. Each
 round starts a fresh server of each, in turn, warms it up for 30 s and
 measures 10 s. A figure is the median of 3 rounds.
 
+netcode-io appears twice. With `websocket.transientMessages`, `onWsMessage`
+gets a view of memory reused for the next messages, valid only during the
+call, which is how uWebSockets.js hands messages over: nothing is copied or
+allocated per message. By default it gets a Buffer of its own to keep, at
+the cost of a copy.
+
 Server CPU per message received, all threads, and how many times less that is
-than uWebSockets.js's:
+than uWebSockets.js's (×):
 
-| | netcode-io | | `transientMessages` | | uWebSockets.js |
+| | netcode-io, `transientMessages` | uWebSockets.js | × | netcode-io, default | × |
 |---|---:|---:|---:|---:|---:|
-| Echo, 500 clients × 20/s | 10.8 µs | 1.12× | 10.7 µs | 1.13× | 12.2 µs |
-| Echo, 2,000 clients × 20/s | 8.9 µs | 1.27× | 9.0 µs | 1.25× | 11.3 µs |
-| Echo, 500 clients, one in flight each | 7.5 µs | 1.33× | 7.3 µs | 1.36× | 10.0 µs |
-| Echo, 2,000 clients × 20/s, TLS | 10.3 µs | 1.62× | 9.6 µs | 1.74× | 16.7 µs |
-| Broadcast, 32 rooms of 32, 4/s each | 165 µs | 1.13× | 169 µs | 1.11× | 187 µs |
-| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 195 µs | 2.71× | 199 µs | 2.64× | 527 µs |
-| 1 KiB, 500 clients × 20/s | 12.6 µs | 0.97× | 10.8 µs | 1.14× | 12.3 µs |
-| 16 KiB, 200 clients × 20/s | 21.9 µs | 0.87× | 18.0 µs | 1.06× | 19.1 µs |
-| 16 KiB, 200 clients × 20/s, TLS | 43.7 µs | 1.04× | 38.2 µs | 1.19× | 45.4 µs |
-| 64 KiB, 50 clients × 20/s | 51.9 µs | 0.84× | 44.4 µs | 0.98× | 43.4 µs |
-| 64 KiB, 50 clients × 20/s, TLS | 108 µs | 1.22× | 94.6 µs | 1.40× | 133 µs |
-| 16 KiB, 50 clients, one in flight each | 14.4 µs | 1.00× | 12.0 µs | 1.20× | 14.4 µs |
+| Echo, 500 clients × 20/s | 10.7 µs | 12.2 µs | 1.13× | 10.8 µs | 1.12× |
+| Echo, 2,000 clients × 20/s | 9.0 µs | 11.3 µs | 1.25× | 8.9 µs | 1.27× |
+| Echo, 500 clients, one in flight each | 7.3 µs | 10.0 µs | 1.36× | 7.5 µs | 1.33× |
+| Echo, 2,000 clients × 20/s, TLS | 9.6 µs | 16.7 µs | 1.74× | 10.3 µs | 1.62× |
+| Broadcast, 32 rooms of 32, 4/s each | 169 µs | 187 µs | 1.11× | 165 µs | 1.13× |
+| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 199 µs | 527 µs | 2.64× | 195 µs | 2.71× |
+| 1 KiB, 500 clients × 20/s | 10.8 µs | 12.3 µs | 1.14× | 12.6 µs | 0.97× |
+| 16 KiB, 200 clients × 20/s | 18.0 µs | 19.1 µs | 1.06× | 21.9 µs | 0.87× |
+| 16 KiB, 200 clients × 20/s, TLS | 38.2 µs | 45.4 µs | 1.19× | 43.7 µs | 1.04× |
+| 64 KiB, 50 clients × 20/s | 44.4 µs | 43.4 µs | 0.98× | 51.9 µs | 0.84× |
+| 64 KiB, 50 clients × 20/s, TLS | 94.6 µs | 133 µs | 1.40× | 108 µs | 1.22× |
+| 16 KiB, 50 clients, one in flight each | 12.0 µs | 14.4 µs | 1.20× | 14.4 µs | 1.00× |
 
-`transientMessages` lends messages for the length of the call, as
-uWebSockets.js does. By default netcode-io keeps them, at the cost of a copy
-per message, which takes it below 1.00× at 1, 16 and 64 KiB without TLS.
+The default's copy takes it below 1.00× at 1, 16 and 64 KiB without TLS.
 With one message in flight per client, netcode-io answers 133–136k messages
 a second to uWebSockets.js's 101k (1.3×), and at 16 KiB 83k with
-`transientMessages` (1.2×), 70k without, to its 70k.
+`transientMessages` (1.2×), 70k by default, to its 70k.
 
 Round trip at the client, p50 / p99 in ms:
 
-| | netcode-io | `transientMessages` | uWebSockets.js |
+| | netcode-io, `transientMessages` | uWebSockets.js | netcode-io, default |
 |---|---:|---:|---:|
-| Echo, 500 clients × 20/s | 0.086 / 0.127 | 0.085 / 0.124 | 0.078 / 0.154 |
-| Echo, 2,000 clients × 20/s | 0.251 / 0.521 | 0.253 / 0.520 | 0.314 / 0.821 |
-| Echo, 500 clients, one in flight each | 3.73 / 4.04 | 3.64 / 3.92 | 4.95 / 5.21 |
-| Echo, 2,000 clients × 20/s, TLS | 0.275 / 0.529 | 0.262 / 0.506 | 0.473 / 1.13 |
-| Broadcast, 32 rooms of 32, 4/s each | 0.743 / 2.17 | 0.744 / 2.05 | 0.911 / 2.82 |
-| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 0.405 / 1.54 | 0.416 / 1.60 | 2.7 s / 7.0 s |
-| 1 KiB, 500 clients × 20/s | 0.094 / 0.193 | 0.077 / 0.167 | 0.075 / 0.200 |
-| 16 KiB, 200 clients × 20/s | 0.101 / 0.169 | 0.088 / 0.129 | 0.083 / 0.133 |
-| 16 KiB, 200 clients × 20/s, TLS | 0.198 / 0.398 | 0.178 / 0.374 | 0.178 / 0.454 |
-| 64 KiB, 50 clients × 20/s | 0.174 / 0.255 | 0.165 / 0.241 | 0.158 / 0.228 |
-| 64 KiB, 50 clients × 20/s, TLS | 0.291 / 0.455 | 0.260 / 0.448 | 0.303 / 0.603 |
-| 16 KiB, 50 clients, one in flight each | 0.634 / 1.49 | 0.541 / 1.13 | 0.670 / 1.37 |
+| Echo, 500 clients × 20/s | 0.085 / 0.124 | 0.078 / 0.154 | 0.086 / 0.127 |
+| Echo, 2,000 clients × 20/s | 0.253 / 0.520 | 0.314 / 0.821 | 0.251 / 0.521 |
+| Echo, 500 clients, one in flight each | 3.64 / 3.92 | 4.95 / 5.21 | 3.73 / 4.04 |
+| Echo, 2,000 clients × 20/s, TLS | 0.262 / 0.506 | 0.473 / 1.13 | 0.275 / 0.529 |
+| Broadcast, 32 rooms of 32, 4/s each | 0.744 / 2.05 | 0.911 / 2.82 | 0.743 / 2.17 |
+| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 0.416 / 1.60 | 2.7 s / 7.0 s | 0.405 / 1.54 |
+| 1 KiB, 500 clients × 20/s | 0.077 / 0.167 | 0.075 / 0.200 | 0.094 / 0.193 |
+| 16 KiB, 200 clients × 20/s | 0.088 / 0.129 | 0.083 / 0.133 | 0.101 / 0.169 |
+| 16 KiB, 200 clients × 20/s, TLS | 0.178 / 0.374 | 0.178 / 0.454 | 0.198 / 0.398 |
+| 64 KiB, 50 clients × 20/s | 0.165 / 0.241 | 0.158 / 0.228 | 0.174 / 0.255 |
+| 64 KiB, 50 clients × 20/s, TLS | 0.260 / 0.448 | 0.303 / 0.603 | 0.291 / 0.455 |
+| 16 KiB, 50 clients, one in flight each | 0.541 / 1.13 | 0.670 / 1.37 | 0.634 / 1.49 |
 
 A broadcast of three messages to each member leaves each socket in one write
 here, where uWebSockets.js makes three, and at this rate falls behind. At
