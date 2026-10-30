@@ -56,6 +56,20 @@ const server = new Server(options, {
 }).serveHttp(http.createServer(app));
 ```
 
+Behind a proxy on the same host, WebSockets and HTTP can take a Unix socket
+instead of a TCP port, as uWebSockets.js's `listen_unix` does. QUIC stays on
+`port`: WebTransport needs its UDP port reachable directly anyway.
+
+```js
+const server = new Server({
+  port: 4433,
+  cert: 'server.crt',
+  key: 'server.key',
+  websocket: { tls: false, socketPath: '/run/app/ws.sock' },
+}, handler);
+fs.chmodSync('/run/app/ws.sock', 0o666); // when nginx runs as another user
+```
+
 ## How it runs
 
 QUIC runs on a thread of its own, not Node's. Its acknowledgements and loss
@@ -239,9 +253,6 @@ them (`.github/workflows/release.yml`).
   WebSockets on connections of their own.
 - WebSocket backpressure: past `maxSendBuffer` the socket is closed with
   1008, and reads never pause.
-- Listening on a Unix socket, as uWebSockets.js's `listen_unix` does: behind
-  a proxy that forwards over one (Colyseus Cloud's nginx), WebSockets can't
-  be served. WebTransport needs its UDP port reachable directly anyway.
 - Windows. Prebuilt packages for Intel Macs and musl Linux (Alpine): those
   build from source.
 

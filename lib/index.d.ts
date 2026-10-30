@@ -4,7 +4,7 @@ import type { Duplex } from 'node:stream';
 export interface ServerOptions {
   /** Default "0.0.0.0". */
   host?: string;
-  /** UDP for QUIC, and TCP for WebSockets unless `websocket.port` says otherwise. 0 lets the kernel pick. */
+  /** UDP for QUIC, and TCP for WebSockets unless `websocket.port` or `websocket.socketPath` says otherwise. 0 lets the kernel pick. */
   port: number;
   /** PEM certificate chain, or a path to one: TLS for both WebTransport and wss://. */
   cert: string | Uint8Array;
@@ -17,6 +17,19 @@ export interface ServerOptions {
     tls?: boolean;
     /** TCP port, when not `port`. */
     port?: number;
+    /**
+     * Serve WebSockets and HTTP on this Unix socket instead of a TCP port,
+     * for a proxy on the same host. Not with `websocket.port`. QUIC still
+     * takes `port`.
+     *
+     * The socket is created by the time the constructor returns, with the
+     * permissions the umask gives: `chmod` it there if the proxy runs as
+     * another user. `stop()` removes it, and one left by a process that died
+     * is replaced; anything else at the path throws. Peers have no address:
+     * `remoteAddress` is undefined, so take the client's from a header the
+     * proxy sets.
+     */
+    socketPath?: string;
     /** Open TCP connections past which new ones are closed on accept. Default 4096. */
     maxConnections?: number;
     /** Largest message accepted, fragments included; bigger closes with 1009. Default 1 MiB. */

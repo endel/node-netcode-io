@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
 import https from 'node:https';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'netcode-io';
@@ -37,6 +38,25 @@ function readBody(req) {
     req.on('error', reject);
   });
 }
+
+test('serveHttp answers on websocket.socketPath', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'netcode-io-'));
+  t.after(() => fs.rmSync(dir, { recursive: true }));
+  const file = path.join(dir, 'http.sock');
+
+  const server = new Server({ ...options, websocket: { ...options.websocket, socketPath: file } }, {})
+    .serveHttp(http.createServer((req, res) => {
+      res.end(`${req.method} ${req.url} from ${req.socket.remoteAddress}`);
+    }));
+  t.after(() => server.stop());
+
+  const body = await new Promise((resolve, reject) => {
+    http.request({ socketPath: file, method: 'POST', path: '/a?b=1' }, (res) => {
+      readBody(res).then((b) => resolve(b.toString()), reject);
+    }).on('error', reject).end('x');
+  });
+  assert.strictEqual(body, 'POST /a?b=1 from undefined');
+});
 
 test('requests reach an http.Server, keep-alive and all, beside WebSockets on the port', async (t) => {
   const sockets = new Set();

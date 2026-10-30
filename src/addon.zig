@@ -107,6 +107,7 @@ fn jsListen(env: napi.Env, info: napi.CallbackInfo) callconv(.c) ?napi.Value {
             error.MissingCertificate => "options.cert and options.key are required",
             error.BadCertificate => "options.cert holds no PEM certificate",
             error.BadKey => "options.key holds no PEM private key: ECDSA P-256, Ed25519 or RSA",
+            error.PortAndSocketPath => "options.websocket takes port or socketPath, not both",
             else => "invalid options",
         });
     };
@@ -203,6 +204,8 @@ fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator, mode: se
     if (try object(env, options, "websocket")) |ws| {
         if (try boolean(env, ws, "tls")) |v| h1.tls = v;
         if (try uint(env, ws, "port")) |p| h1.port = std.math.cast(u16, p) orelse return error.InvalidPort;
+        h1.unix_path = try string(env, ws, "socketPath", a);
+        if (h1.port != null and h1.unix_path != null) return error.PortAndSocketPath;
         if (try uint(env, ws, "maxConnections")) |v| h1.max_connections = v;
         if (try uint(env, ws, "maxMessageSize")) |v| h1.websocket.max_message_size = v;
         if (try uint(env, ws, "maxSendBuffer")) |v| h1.websocket.max_send_buffer = v;

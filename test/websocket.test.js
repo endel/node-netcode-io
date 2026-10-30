@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
 import http from 'node:http';
+import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Server } from 'netcode-io';
@@ -208,6 +214,87 @@ test('stop() closes open sockets with 1001 and resolves', async (t) => {
   await server.stop();
   assert.strictEqual((await closed).code, 1001);
   assert.strictEqual(server.port, undefined);
+});
+
+function socketPath(t) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'netcode-io-'));
+  t.after(() => fs.rmSync(dir, { recursive: true }));
+  return path.join(dir, 'ws.sock');
+}
+
+/** `WebSocket` can't dial a Unix socket: the upgrade by hand. */
+function openUnix(file, urlPath) {
+  return new Promise((resolve, reject) => {
+    http.request({
+      socketPath: file,
+      path: urlPath,
+      headers: {
+        Connection: 'Upgrade',
+        Upgrade: 'websocket',
+        'Sec-WebSocket-Version': '13',
+        'Sec-WebSocket-Key': crypto.randomBytes(16).toString('base64'),
+      },
+    }).on('upgrade', (res, socket) => resolve(socket)).on('error', reject).end();
+  });
+}
+
+function maskedText(text) {
+  const payload = Buffer.from(text);
+  // An all-zero mask leaves the payload as it is.
+  return Buffer.concat([Buffer.from([0x81, 0x80 | payload.length, 0, 0, 0, 0]), payload]);
+}
+
+test('websocket.socketPath serves WebSockets on a Unix socket, and stop() removes it', async (t) => {
+  const file = socketPath(t);
+  let request;
+  const server = new Server({ ...options, websocket: { ...options.websocket, socketPath: file } }, {
+    onWsOpen(id, req) { request = req; },
+    onWsMessage(id, data, isText) { server.send(id, data, isText); },
+  });
+  t.after(() => server.stop());
+
+  assert.ok(fs.statSync(file).isSocket());
+  const socket = await openUnix(file, '/room/abc');
+  const echoed = new Promise((resolve) => { socket.once('data', resolve); });
+  socket.write(maskedText('héllo'));
+  assert.strictEqual((await echoed).subarray(2).toString(), 'héllo');
+
+  assert.strictEqual(request.path, '/room/abc');
+  assert.strictEqual(request.remoteAddress, undefined);
+  assert.strictEqual(request.remoteFamily, undefined);
+  assert.strictEqual(request.remotePort, 0);
+
+  socket.destroy();
+  await server.stop();
+  assert.strictEqual(fs.existsSync(file), false);
+});
+
+test('a path in use throws from the constructor; one left by a dead server is replaced', async (t) => {
+  const file = socketPath(t);
+  const opts = { ...options, websocket: { ...options.websocket, socketPath: file } };
+
+  const live = net.createServer().listen(file);
+  await once(live, 'listening');
+  assert.throws(() => new Server(opts, {}), /AddressInUse/);
+  await new Promise((resolve) => { live.close(resolve); });
+
+  const script = `require('net').createServer().listen(${JSON.stringify(file)}, () => process.kill(process.pid, 'SIGKILL'))`;
+  spawnSync(process.execPath, ['-e', script]);
+  assert.ok(fs.statSync(file).isSocket());
+
+  const server = new Server(opts, {});
+  t.after(() => server.stop());
+  await openUnix(file, '/').then((socket) => socket.destroy());
+  await server.stop();
+
+  fs.writeFileSync(file, 'not a socket');
+  assert.throws(() => new Server(opts, {}), /AddressInUse/);
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), 'not a socket');
+});
+
+test('websocket.socketPath with websocket.port throws', (t) => {
+  const websocket = { ...options.websocket, port: 0, socketPath: socketPath(t) };
+  assert.throws(() => new Server({ ...options, websocket }, {}), /port or socketPath/);
 });
 
 test('a port in use throws from the constructor', (t) => {
