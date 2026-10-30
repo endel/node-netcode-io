@@ -1,16 +1,16 @@
-'use strict';
+import { test } from 'node:test';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import http from 'node:http';
+import net from 'node:net';
+import https from 'node:https';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Server } from 'netcode-io';
+import { thread } from './thread.js';
 
-const { test } = require('node:test');
-const assert = require('node:assert');
-const fs = require('node:fs');
-const http = require('node:http');
-const net = require('node:net');
-const https = require('node:https');
-const path = require('node:path');
-const { Server } = require('..');
-const { thread } = require('./thread.js');
-
-const certs = path.join(__dirname, 'certs');
+const here = path.dirname(fileURLToPath(import.meta.url));
+const certs = path.join(here, 'certs');
 const options = {
   host: '127.0.0.1',
   port: 0,
@@ -161,7 +161,6 @@ test('certificates may be given as PEM instead of paths', async (t) => {
 });
 
 test('a client that half-closes after its request still gets the answer', async (t) => {
-  const net = require('node:net');
   const httpServer = http.createServer((req, res) => {
     req.resume();
     req.on('end', () => setTimeout(() => res.end('late'), 50));
@@ -212,7 +211,6 @@ test('requests that arrive together are handled as separate sockets would be: mi
   // Node gives each socket's data its own callback. Code written for that,
   // like a matchmaker that reserves a seat before the next request looks for
   // one, mustn't see every connection's request in one synchronous run.
-  const net = require('node:net');
   const order = [];
   let others;
   const httpServer = http.createServer((req, res) => {

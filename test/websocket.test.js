@@ -1,12 +1,13 @@
-'use strict';
+import { test } from 'node:test';
+import assert from 'node:assert';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Server } from 'netcode-io';
+import { thread } from './thread.js';
 
-const { test } = require('node:test');
-const assert = require('node:assert');
-const path = require('node:path');
-const { Server } = require('..');
-const { thread } = require('./thread.js');
-
-const certs = path.join(__dirname, 'certs');
+const here = path.dirname(fileURLToPath(import.meta.url));
+const certs = path.join(here, 'certs');
 const options = {
   host: '127.0.0.1',
   port: 0,
@@ -247,7 +248,6 @@ test('transientMessages: each message is whole during its call; what JS reads la
   const sizes = [10, 200, 70 * 1024, 5, 300 * 1024, 1];
   const copies = [];
   let request;
-  const http = require('node:http');
   const httpServer = http.createServer((req, res) => {
     const chunks = [];
     req.on('data', (c) => chunks.push(c));

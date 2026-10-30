@@ -11,8 +11,11 @@ Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later) and macOS on
 Apple silicon. The x64 build needs x86-64-v3 with AES-NI, which servers have
 had since 2013. Other platforms build from source (below).
 
+It is an ES module only. CommonJS can still `require()` it on Node.js
+20.19 and 22.12 or later, which load ES modules that way.
+
 ```js
-const { Server } = require('netcode-io');
+import { Server } from 'netcode-io';
 
 const server = new Server({ port: 4433, cert: 'server.crt', key: 'server.key' }, {
   onWsMessage(ws, data, isText) { server.send(ws, data, isText); },

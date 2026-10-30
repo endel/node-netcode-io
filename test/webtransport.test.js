@@ -1,14 +1,14 @@
-'use strict';
+import { test } from 'node:test';
+import assert from 'node:assert';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { Server } from 'netcode-io';
+import { thread } from './thread.js';
 
-const { test } = require('node:test');
-const assert = require('node:assert');
-const path = require('node:path');
-const { execFile } = require('node:child_process');
-const { Server } = require('..');
-const { thread } = require('./thread.js');
-
-const root = path.join(__dirname, '..');
-const certs = path.join(__dirname, 'certs');
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(here, '..');
+const certs = path.join(here, 'certs');
 const client = path.join(root, 'zig-out', 'bin', 'wt-test-client');
 const options = {
   host: '127.0.0.1',

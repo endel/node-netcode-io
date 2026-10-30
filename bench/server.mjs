@@ -3,6 +3,7 @@
 //   node server.mjs <uws|netcode|netcode-DIR> <port> <plain|tls> [workUs] [echo|broadcast:N[:K]]
 // IPC: "start" opens a window, "stop" answers with its metrics.
 import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 import { performance } from 'perf_hooks';
 
 const require = createRequire(import.meta.url);
@@ -63,7 +64,7 @@ if (name === 'uws') {
   });
   await new Promise((resolve, reject) => app.listen(HOST, port, (s) => s ? resolve() : reject(new Error('listen failed'))));
 } else {
-  const { Server } = require(`${NETCODE}/lib/index.js`);
+  const { Server } = await import(pathToFileURL(`${NETCODE}/lib/index.js`).href);
   let server;
   const roomOf = new Map();
   server = new Server({ host: HOST, port, cert: CERT, key: KEY, websocket: { tls, maxConnections: 1 << 20, pingInterval: 0, maxMessageSize: 1 << 20, maxSendBuffer: 16 << 20, transientMessages: !KEPT, thread: process.env.NETCODE_THREAD } }, {
