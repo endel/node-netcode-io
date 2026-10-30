@@ -123,4 +123,7 @@ otherwise `netcode-io-<platform>-<arch>`.
   WebSockets on connections of their own.
 - WebSocket backpressure: past `maxSendBuffer` the socket is closed with
   1008, and reads never pause.
+- Listening on a Unix socket, as uWebSockets.js's `listen_unix` does: behind
+  a proxy that forwards over one (Colyseus Cloud's nginx), WebSockets can't
+  be served. WebTransport needs its UDP port reachable directly anyway.
 - Windows; prebuilt packages.
