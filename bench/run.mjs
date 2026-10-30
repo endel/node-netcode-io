@@ -3,7 +3,12 @@
 //
 //   (cd wsload && go build)
 //   UWS=/path/to/uWebSockets.js GOMAXPROCS=4 node run.mjs [--rounds 3] [--only regex]
-//       [--measure 8] [--warmup 2] [--transports uws,netcode] [--out file.json]
+//       [--measure 8] [--warmup 30] [--transports uws,netcode] [--out file.json]
+//
+// The warmup is long because a shorter one measures startup, not the server:
+// netcode's JS reaches TurboFan only after ~3000 calls, and V8's memory
+// reducer runs a mark-compact 20-30 s in, landing in one server's window
+// and not the other's.
 //
 // Cap the load generator (GOMAXPROCS): uncapped, its spinning threads starve
 // the server's two threads at every handoff on a shared machine, and the
@@ -20,7 +25,7 @@ const flag = (n, d) => { const i = argv.indexOf(`--${n}`); return i === -1 ? d :
 const rounds = Number(flag('rounds', 3));
 const only = flag('only');
 const MEASURE = Number(flag('measure', 8));
-const WARMUP = Number(flag('warmup', 2));
+const WARMUP = Number(flag('warmup', 30));
 const transports = flag('transports', 'uws,netcode').split(',');
 const out = flag('out');
 

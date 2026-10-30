@@ -9,6 +9,8 @@ const require = createRequire(import.meta.url);
 const [name, portArg, security, workArg, modeArg] = process.argv.slice(2);
 const port = Number(portArg);
 const tls = security === 'tls';
+// 0.0.0.0 lets a CCU run spread its connections over 127.0.0.x, past one address's ~64k ports
+const HOST = process.env.BENCH_HOST ?? '127.0.0.1';
 const workUs = Number(workArg ?? 0);
 // "broadcast:N[:K]": connections join rooms of N in arrival order, and each
 // message goes to the whole room, K times over as separate messages
@@ -59,12 +61,12 @@ if (name === 'uws') {
       }
     },
   });
-  await new Promise((resolve, reject) => app.listen('127.0.0.1', port, (s) => s ? resolve() : reject(new Error('listen failed'))));
+  await new Promise((resolve, reject) => app.listen(HOST, port, (s) => s ? resolve() : reject(new Error('listen failed'))));
 } else {
   const { Server } = require(`${NETCODE}/lib/index.js`);
   let server;
   const roomOf = new Map();
-  server = new Server({ host: '127.0.0.1', port, cert: CERT, key: KEY, websocket: { tls, pingInterval: 0, maxMessageSize: 1 << 20, maxSendBuffer: 16 << 20, transientMessages: !KEPT, thread: process.env.NETCODE_THREAD } }, {
+  server = new Server({ host: HOST, port, cert: CERT, key: KEY, websocket: { tls, maxConnections: 1 << 20, pingInterval: 0, maxMessageSize: 1 << 20, maxSendBuffer: 16 << 20, transientMessages: !KEPT, thread: process.env.NETCODE_THREAD } }, {
     onWsOpen: (ws) => { if (roomSize) { roomOf.set(ws, join(ws)); } },
     onWsMessage: (ws, data, isText) => {
       messages++; work();
