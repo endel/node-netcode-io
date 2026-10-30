@@ -191,6 +191,7 @@ fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator, mode: se
         .port = std.math.cast(u16, try uint(env, options, "port") orelse 0) orelse return error.InvalidPort,
         .tls_config = try tlsConfig(a, cert, key),
     };
+    if (try uint(env, options, "maxConnections")) |v| config.max_connections = v;
 
     // Always on: quic-zig wants an HTTP/1.1 listener for a handler that
     // takes WebSockets, and ours always does.
@@ -202,6 +203,7 @@ fn readConfig(env: napi.Env, options: napi.Value, a: std.mem.Allocator, mode: se
     if (try object(env, options, "websocket")) |ws| {
         if (try boolean(env, ws, "tls")) |v| h1.tls = v;
         if (try uint(env, ws, "port")) |p| h1.port = std.math.cast(u16, p) orelse return error.InvalidPort;
+        if (try uint(env, ws, "maxConnections")) |v| h1.max_connections = v;
         if (try uint(env, ws, "maxMessageSize")) |v| h1.websocket.max_message_size = v;
         if (try uint(env, ws, "maxSendBuffer")) |v| h1.websocket.max_send_buffer = v;
         if (try uint(env, ws, "pingInterval")) |v| h1.websocket.ping_interval_ms = v;

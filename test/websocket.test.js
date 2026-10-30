@@ -128,6 +128,24 @@ test('an unknown websocket.thread throws', () => {
   assert.throws(() => new Server({ ...options, websocket: { thread: 'worker' } }), /websocket\.thread/);
 });
 
+test('websocket.maxConnections closes connections past it on accept', async (t) => {
+  const server = new Server({ ...options, websocket: { ...options.websocket, maxConnections: 2 } }, {
+    onWsMessage(id, data, isText) { server.send(id, data, isText); },
+  });
+  t.after(() => server.stop());
+  const url = `ws://127.0.0.1:${server.port}/`;
+
+  const a = await open(url);
+  const b = await open(url);
+  await assert.rejects(open(url));
+  b.send('still served');
+  assert.strictEqual(await next(b), 'still served');
+
+  a.close();
+  b.close();
+  await server.stop();
+});
+
 test('a server close reaches the client with its code and reason', async (t) => {
   const server = new Server(options, {
     onWsOpen(id) { server.closeWebSocket(id, 4000, 'bye'); },

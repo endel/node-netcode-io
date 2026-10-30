@@ -10,11 +10,15 @@ export interface ServerOptions {
   cert: string | Uint8Array;
   /** PEM private key, or a path to one: ECDSA P-256, Ed25519 or RSA. */
   key: string | Uint8Array;
+  /** QUIC connections past which new ones are refused (CONNECTION_REFUSED). Default 256. */
+  maxConnections?: number;
   websocket?: {
     /** false serves ws:// and http://, for a proxy that terminates TLS. Default true. */
     tls?: boolean;
     /** TCP port, when not `port`. */
     port?: number;
+    /** Open TCP connections past which new ones are closed on accept. Default 4096. */
+    maxConnections?: number;
     /** Largest message accepted, fragments included; bigger closes with 1009. Default 1 MiB. */
     maxMessageSize?: number;
     /** Bytes queued for a peer that isn't reading past which it is closed with 1008. Default 4 MiB. */
