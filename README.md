@@ -7,9 +7,9 @@ WebSocket and WebTransport on one port for Node.js, served by
 npm install netcode-io
 ```
 
-Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later) and macOS on
-Apple silicon. The x64 build needs x86-64-v3 with AES-NI, which servers have
-had since 2013. Other platforms build from source (below).
+Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later), macOS on Apple
+silicon, and Windows on x64. The x64 builds need x86-64-v3 with AES-NI, which
+servers have had since 2013. Other platforms build from source (below).
 
 It needs Node.js 22 or later, and is an ES module only: CommonJS can still
 `require()` it from Node.js 22.12, which loads ES modules that way.
@@ -58,7 +58,8 @@ const server = new Server(options, {
 
 Behind a proxy on the same host, WebSockets and HTTP can take a Unix socket
 instead of a TCP port, as uWebSockets.js's `listen_unix` does. QUIC stays on
-`port`: WebTransport needs its UDP port reachable directly anyway.
+`port`: WebTransport needs its UDP port reachable directly anyway. Not on
+Windows.
 
 ```js
 const server = new Server({
@@ -254,8 +255,10 @@ publishes them and tags the commit (`.github/workflows/release.yml`).
   WebSockets on connections of their own.
 - WebSocket backpressure: past `maxSendBuffer` the socket is closed with
   1008, and reads never pause.
-- Windows. Prebuilt packages for Intel Macs and musl Linux (Alpine): those
-  build from source.
+- Prebuilt packages for Intel Macs, musl Linux (Alpine) and Windows on arm64:
+  those build from source.
+- Hosts other than `node.exe` on Windows: the addon imports Node-API from it by
+  name, so Electron or a renamed binary can't load it.
 
 ## License
 

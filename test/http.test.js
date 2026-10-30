@@ -11,6 +11,9 @@ import { Server } from 'netcode-io';
 import { thread } from './thread.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const noUnixSockets = process.platform === 'win32' && 'no Unix sockets on Windows';
+// Winsock takes a whole nonblocking send: nothing stays queued for destroy to drop.
+const kernelTakesAll = process.platform === 'win32' && 'nothing left to drop on Windows';
 const certs = path.join(here, 'certs');
 const options = {
   host: '127.0.0.1',
@@ -39,7 +42,7 @@ function readBody(req) {
   });
 }
 
-test('serveHttp answers on websocket.socketPath', async (t) => {
+test('serveHttp answers on websocket.socketPath', { skip: noUnixSockets }, async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'netcode-io-'));
   t.after(() => fs.rmSync(dir, { recursive: true }));
   const file = path.join(dir, 'http.sock');
@@ -204,7 +207,7 @@ test('a client that half-closes after its request still gets the answer', async 
   await server.stop();
 });
 
-test('destroy() drops what was queued instead of sending it', async (t) => {
+test('destroy() drops what was queued instead of sending it', { skip: kernelTakesAll }, async (t) => {
   const size = 32 << 20;
   const httpServer = http.createServer((req, res) => {
     res.writeHead(200, { 'content-length': size });

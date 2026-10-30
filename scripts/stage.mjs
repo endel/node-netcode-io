@@ -11,6 +11,7 @@ const platforms = {
   'linux-x64': { os: 'linux', cpu: 'x64', libc: 'glibc' },
   'linux-arm64': { os: 'linux', cpu: 'arm64', libc: 'glibc' },
   'darwin-arm64': { os: 'darwin', cpu: 'arm64' },
+  'win32-x64': { os: 'win32', cpu: 'x64' },
 };
 
 for (const [platform, t] of Object.entries(platforms)) {

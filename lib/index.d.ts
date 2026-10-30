@@ -27,7 +27,7 @@ export interface ServerOptions {
      * another user. `stop()` removes it, and one left by a process that died
      * is replaced; anything else at the path throws. Peers have no address:
      * `remoteAddress` is undefined, so take the client's from a header the
-     * proxy sets.
+     * proxy sets. Not on Windows.
      */
     socketPath?: string;
     /** Open TCP connections past which new ones are closed on accept. Default 4096. */

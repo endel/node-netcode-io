@@ -6,15 +6,19 @@ pub const Loop = opaque {};
 pub const Handle = opaque {};
 
 // uv_handle_type and uv_poll_event values, from uv.h.
+pub const ASYNC: c_int = 1;
 pub const POLL: c_int = 8;
 pub const TIMER: c_int = 13;
 pub const READABLE: c_int = 1;
 
 pub const PollCb = *const fn (*Handle, c_int, c_int) callconv(.c) void;
+pub const AsyncCb = *const fn (*Handle) callconv(.c) void;
 pub const TimerCb = *const fn (*Handle) callconv(.c) void;
 pub const CloseCb = *const fn (*Handle) callconv(.c) void;
 
 pub extern fn uv_handle_size(kind: c_int) usize;
+pub extern fn uv_async_init(loop: *Loop, handle: *Handle, cb: AsyncCb) c_int;
+pub extern fn uv_async_send(handle: *Handle) c_int;
 pub extern fn uv_poll_init(loop: *Loop, handle: *Handle, fd: c_int) c_int;
 pub extern fn uv_poll_start(handle: *Handle, events: c_int, cb: PollCb) c_int;
 pub extern fn uv_timer_init(loop: *Loop, handle: *Handle) c_int;

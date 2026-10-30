@@ -23,6 +23,15 @@ pub fn build(b: *std.Build) void {
     });
     // Node-API symbols resolve against the host process when it loads us.
     addon.linker_allow_shlib_undefined = true;
+    // PE can't leave them undefined: import them from node.exe by name.
+    if (target.result.os.tag == .windows) {
+        const implib = b.addSystemCommand(&.{ b.graph.zig_exe, "dlltool", "-D", "node.exe", "-m" });
+        implib.addArg(if (target.result.cpu.arch == .aarch64) "arm64" else "i386:x86-64");
+        implib.addArg("-d");
+        implib.addFileArg(b.path("src/node.def"));
+        implib.addArg("-l");
+        addon.root_module.addObjectFile(implib.addOutputFileArg("node.lib"));
+    }
 
     const install = b.addInstallFileWithDir(addon.getEmittedBin(), .lib, "netcode_io.node");
     b.getInstallStep().dependOn(&install.step);

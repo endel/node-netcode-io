@@ -2,7 +2,9 @@
 //! connections JS serves itself, with no hop between threads. A libxev loop
 //! of our own runs quic-zig's listener; libuv polls that loop's kqueue or
 //! epoll fd, so Node wakes for it as for one of its own sockets, and a timer
-//! stands in for the loop's own timers. Each wake runs the loop once without
+//! stands in for the loop's own timers. A completion port has no fd to poll:
+//! on Windows a `PortWatch` thread wakes Node through a uv_async instead.
+//! Each wake runs the loop once without
 //! blocking and hands JS what came of it in one call. The commands JS
 //! answers with run as `submit` receives them, so a reply is written before
 //! the call returns.
@@ -24,6 +26,8 @@ const Tcp = @import("tcp.zig").Tcp;
 
 const gpa = std.heap.c_allocator;
 const log = std.log.scoped(.netcode_io);
+const iocp = xev.backend == .iocp;
+const watch_kind = if (iocp) uv.ASYNC else uv.POLL;
 
 pub const Local = struct {
     env: napi.Env,
@@ -74,7 +78,9 @@ pub const Local = struct {
     paused_any: bool = false,
     stopping: bool = false,
 
+    /// A uv_poll on the loop's fd, or the uv_async `watch` signals.
     poll: *uv.Handle,
+    watch: if (iocp) xev_backend.PortWatch else void = undefined,
     timer: *uv.Handle,
     /// uv handles not yet closed; the last close frees us.
     open_handles: u8 = 0,
@@ -111,11 +117,18 @@ pub const Local = struct {
         errdefer _ = napi.napi_async_destroy(env, self.async_ctx);
 
         // Last: once libuv has them, only uv_close gives them back.
-        self.poll = try newHandle(uv.POLL);
-        errdefer freeHandle(self.poll, uv.POLL);
+        self.poll = try newHandle(watch_kind);
+        errdefer freeHandle(self.poll, watch_kind);
         self.timer = try newHandle(uv.TIMER);
         errdefer freeHandle(self.timer, uv.TIMER);
-        if (uv.uv_poll_init(@ptrCast(uv_loop), self.poll, xev_backend.pollFd(&self.loop)) != 0) return error.Uv;
+        if (comptime iocp) {
+            // Quiet until the first run below: nothing is on the port yet.
+            try self.watch.start(&self.loop, wakeNode, self);
+            // Can't fail on Windows.
+            _ = uv.uv_async_init(@ptrCast(uv_loop), self.poll, onWake);
+        } else {
+            if (uv.uv_poll_init(@ptrCast(uv_loop), self.poll, xev_backend.pollFd(&self.loop)) != 0) return error.Uv;
+        }
         // Can't fail: it only fills the handle in.
         _ = uv.uv_timer_init(@ptrCast(uv_loop), self.timer);
         self.open_handles = 2;
@@ -124,7 +137,7 @@ pub const Local = struct {
         // The poll keeps Node alive, as a listening net.Server does; the
         // timer only stands in for the loop's.
         uv.uv_unref(self.timer);
-        _ = uv.uv_poll_start(self.poll, uv.READABLE, onPoll);
+        if (comptime !iocp) _ = uv.uv_poll_start(self.poll, uv.READABLE, onPoll);
         // The listener's watch goes to the kernel on the loop's first tick.
         self.loop.run(.no_wait) catch |err| log.err("event loop: {any}", .{err});
         self.armTimer();
@@ -149,6 +162,18 @@ pub const Local = struct {
     fn onPoll(handle: *uv.Handle, _: c_int, _: c_int) callconv(.c) void {
         const self: *Local = @ptrCast(@alignCast(uv.uv_handle_get_data(handle).?));
         self.pump();
+    }
+
+    /// `PortWatch`'s thread.
+    fn wakeNode(ctx: ?*anyopaque) void {
+        const self: *Local = @ptrCast(@alignCast(ctx.?));
+        _ = uv.uv_async_send(self.poll);
+    }
+
+    fn onWake(handle: *uv.Handle) callconv(.c) void {
+        const self: *Local = @ptrCast(@alignCast(uv.uv_handle_get_data(handle).?));
+        self.pump();
+        self.watch.rearm();
     }
 
     fn onTimer(handle: *uv.Handle) callconv(.c) void {
@@ -519,6 +544,7 @@ pub const Local = struct {
     /// for JS, closes mostly; they stay valid until the uv handles have
     /// closed, after the caller returns to Node's loop.
     pub fn destroy(self: *Local) []const u8 {
+        if (comptime iocp) self.watch.stop(); // before the port closes with the loop
         self.stop();
         self.loop.run(.no_wait) catch {};
         // Closes whatever is still open, with onWsClose for each WebSocket.
@@ -538,7 +564,7 @@ pub const Local = struct {
 
     fn onClosed(handle: *uv.Handle) callconv(.c) void {
         const self: *Local = @ptrCast(@alignCast(uv.uv_handle_get_data(handle).?));
-        freeHandle(handle, if (handle == self.poll) uv.POLL else uv.TIMER);
+        freeHandle(handle, if (handle == self.poll) watch_kind else uv.TIMER);
         self.open_handles -= 1;
         if (self.open_handles > 0) return;
         self.events.deinit(gpa);

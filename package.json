@@ -26,7 +26,8 @@
   "optionalDependencies": {
     "netcode-io-darwin-arm64": "0.0.2",
     "netcode-io-linux-arm64": "0.0.2",
-    "netcode-io-linux-x64": "0.0.2"
+    "netcode-io-linux-x64": "0.0.2",
+    "netcode-io-win32-x64": "0.0.2"
   },
   "scripts": {
     "build": "zig build -Doptimize=ReleaseFast",

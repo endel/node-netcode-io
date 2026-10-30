@@ -41,7 +41,11 @@ jobs:
           - { os: ubuntu-latest, pkg: linux-x64, target: x86_64-linux-gnu.2.28, cpu: x86_64_v3+aes+pclmul }
           - { os: ubuntu-24.04-arm, pkg: linux-arm64, target: aarch64-linux-gnu.2.28, cpu: generic+aes+sha2 }
           - { os: macos-latest, pkg: darwin-arm64, target: aarch64-macos.13.0, cpu: apple_m1 }
+          - { os: windows-latest, pkg: win32-x64, target: x86_64-windows-gnu, cpu: x86_64_v3+aes+pclmul }
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,9 +69,10 @@ jobs:
         run: zig build -Doptimize=ReleaseFast -Dstrip -Dtarget=${{ matrix.target }} -Dcpu=${{ matrix.cpu }}
 
       # the tests load zig-out's addon: the binary that ships
+      # script-shell: npm's default on Windows, cmd, can't set a variable inline
       - name: Test
         working-directory: netcode-io
-        run: npm test
+        run: npm test --script-shell=bash
 
       - name: Record the quic-zig it was built from
         run: git -C quic-zig rev-parse HEAD > netcode-io/zig-out/lib/quic-zig.rev

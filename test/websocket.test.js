@@ -13,6 +13,7 @@ import { Server } from 'netcode-io';
 import { thread } from './thread.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const noUnixSockets = process.platform === 'win32' && 'no Unix sockets on Windows';
 const certs = path.join(here, 'certs');
 const options = {
   host: '127.0.0.1',
@@ -244,7 +245,7 @@ function maskedText(text) {
   return Buffer.concat([Buffer.from([0x81, 0x80 | payload.length, 0, 0, 0, 0]), payload]);
 }
 
-test('websocket.socketPath serves WebSockets on a Unix socket, and stop() removes it', async (t) => {
+test('websocket.socketPath serves WebSockets on a Unix socket, and stop() removes it', { skip: noUnixSockets }, async (t) => {
   const file = socketPath(t);
   let request;
   const server = new Server({ ...options, websocket: { ...options.websocket, socketPath: file } }, {
@@ -269,7 +270,7 @@ test('websocket.socketPath serves WebSockets on a Unix socket, and stop() remove
   assert.strictEqual(fs.existsSync(file), false);
 });
 
-test('a path in use throws from the constructor; one left by a dead server is replaced', async (t) => {
+test('a path in use throws from the constructor; one left by a dead server is replaced', { skip: noUnixSockets }, async (t) => {
   const file = socketPath(t);
   const opts = { ...options, websocket: { ...options.websocket, socketPath: file } };
 
