@@ -1,0 +1,49 @@
+dgram 50x20 64B        old      r1    46.29 us/msg   119544 instr   170974 cyc     1000 msg/s  p50 0.089 p90 0.101 p99 0.115  loss 0 err 0 silent 0
+dgram 50x20 64B        new      r1    39.07 us/msg    80657 instr   142015 cyc     1000 msg/s  p50 0.077 p90 0.087 p99 0.098  loss 0 err 0 silent 0
+dgram 50x20 64B        new      r2    36.82 us/msg    77342 instr   133854 cyc     1000 msg/s  p50 0.078 p90 0.089 p99 0.102  loss 0 err 0 silent 0
+dgram 50x20 64B        old      r2    47.56 us/msg   121875 instr   176397 cyc     1000 msg/s  p50 0.09 p90 0.103 p99 0.122  loss 0 err 0 silent 0
+dgram 50x20 64B        old      r3    45.57 us/msg   118463 instr   168869 cyc     1000 msg/s  p50 0.089 p90 0.102 p99 0.116  loss 0 err 0 silent 0
+dgram 50x20 64B        new      r3    38.97 us/msg    80085 instr   141679 cyc     1000 msg/s  p50 0.077 p90 0.088 p99 0.101  loss 0 err 0 silent 0
+stream 50x20 64B       old      r1    47.48 us/msg   121055 instr   176057 cyc     1000 msg/s  p50 0.095 p90 0.108 p99 0.12  loss 0 err 0 silent 0
+stream 50x20 64B       new      r1    38.47 us/msg    80630 instr   140500 cyc     1000 msg/s  p50 0.084 p90 0.098 p99 0.112  loss 0 err 0 silent 0
+stream 50x20 64B       new      r2    37.24 us/msg    78797 instr   136401 cyc     1000 msg/s  p50 0.084 p90 0.097 p99 0.11  loss 0 err 0 silent 0
+stream 50x20 64B       old      r2    46.00 us/msg   116882 instr   170520 cyc     1000 msg/s  p50 0.096 p90 0.113 p99 0.13  loss 0 err 0 silent 0
+stream 50x20 64B       old      r3    46.51 us/msg   117901 instr   172600 cyc     1000 msg/s  p50 0.096 p90 0.112 p99 0.132  loss 0 err 0 silent 0
+stream 50x20 64B       new      r3    36.78 us/msg    77298 instr   135020 cyc     1000 msg/s  p50 0.085 p90 0.1 p99 0.115  loss 0 err 0 silent 0
+dgram 250x20 64B       old      r1    47.86 us/msg   173769 instr   186328 cyc     5001 msg/s  p50 0.195 p90 0.307 p99 0.389  loss 0 err 0 silent 0
+dgram 250x20 64B       new      r1    22.83 us/msg    54100 instr    86572 cyc     5000 msg/s  p50 0.095 p90 0.123 p99 0.165  loss 0 err 0 silent 0
+dgram 250x20 64B       new      r2    22.53 us/msg    53821 instr    85428 cyc     5000 msg/s  p50 0.095 p90 0.124 p99 0.166  loss 0 err 0 silent 0
+dgram 250x20 64B       old      r2    48.00 us/msg   172909 instr   187003 cyc     4999 msg/s  p50 0.198 p90 0.315 p99 0.398  loss 0 err 0 silent 0
+dgram 250x20 64B       old      r3    48.91 us/msg   177690 instr   190534 cyc     5000 msg/s  p50 0.198 p90 0.308 p99 0.39  loss 0 err 0 silent 0
+dgram 250x20 64B       new      r3    22.48 us/msg    54027 instr    85161 cyc     5000 msg/s  p50 0.095 p90 0.122 p99 0.159  loss 0 err 0 silent 0
+stream 250x20 64B      old      r1    47.66 us/msg   168684 instr   185956 cyc     5000 msg/s  p50 0.205 p90 0.323 p99 0.427  loss 0 err 0 silent 0
+stream 250x20 64B      new      r1    23.86 us/msg    56919 instr    90926 cyc     5000 msg/s  p50 0.11 p90 0.144 p99 0.183  loss 0 err 0 silent 0
+stream 250x20 64B      new      r2    23.77 us/msg    57040 instr    90452 cyc     5001 msg/s  p50 0.111 p90 0.145 p99 0.187  loss 0 err 0 silent 0
+stream 250x20 64B      old      r2    48.48 us/msg   172164 instr   189104 cyc     5000 msg/s  p50 0.207 p90 0.339 p99 0.426  loss 0 err 0 silent 0
+stream 250x20 64B      old      r3    48.21 us/msg   169032 instr   188110 cyc     4999 msg/s  p50 0.208 p90 0.329 p99 0.428  loss 0 err 0 silent 0
+stream 250x20 64B      new      r3    23.64 us/msg    56423 instr    90139 cyc     5000 msg/s  p50 0.11 p90 0.143 p99 0.182  loss 0 err 0 silent 0
+dgram 1x200 64B        old      r1    50.47 us/msg    95261 instr   180186 cyc      200 msg/s  p50 0.082 p90 0.093 p99 0.1  loss 0 err 0 silent 0
+dgram 1x200 64B        new      r1    51.12 us/msg    95490 instr   183440 cyc      200 msg/s  p50 0.083 p90 0.093 p99 0.1  loss 0 err 0 silent 0
+dgram 1x200 64B        new      r2    51.47 us/msg    95391 instr   184786 cyc      200 msg/s  p50 0.083 p90 0.094 p99 0.099  loss 0 err 0 silent 0
+dgram 1x200 64B        old      r2    51.39 us/msg    95334 instr   184143 cyc      200 msg/s  p50 0.083 p90 0.094 p99 0.104  loss 0 err 0 silent 0
+dgram 1x200 64B        old      r3    50.33 us/msg    95200 instr   179791 cyc      200 msg/s  p50 0.082 p90 0.093 p99 0.098  loss 0 err 0 silent 0
+dgram 1x200 64B        new      r3    51.10 us/msg    95384 instr   182985 cyc      200 msg/s  p50 0.083 p90 0.094 p99 0.102  loss 0 err 0 silent 0
+stream 1x200 64B       old      r1    48.79 us/msg    88461 instr   175657 cyc      200 msg/s  p50 0.082 p90 0.086 p99 0.092  loss 0 err 0 silent 0
+stream 1x200 64B       new      r1    49.11 us/msg    89198 instr   177481 cyc      200 msg/s  p50 0.082 p90 0.088 p99 0.103  loss 0 err 0 silent 0
+stream 1x200 64B       new      r2    48.64 us/msg    88646 instr   175667 cyc      200 msg/s  p50 0.083 p90 0.087 p99 0.094  loss 0 err 0 silent 0
+stream 1x200 64B       old      r2    49.36 us/msg    89049 instr   178651 cyc      200 msg/s  p50 0.083 p90 0.088 p99 0.097  loss 0 err 0 silent 0
+stream 1x200 64B       old      r3    48.31 us/msg    88591 instr   174192 cyc      200 msg/s  p50 0.081 p90 0.086 p99 0.093  loss 0 err 0 silent 0
+stream 1x200 64B       new      r3    48.79 us/msg    88675 instr   176277 cyc      200 msg/s  p50 0.082 p90 0.087 p99 0.11  loss 0 err 0 silent 0
+== medians
+dgram 50x20 64B        old        46.29 us/msg  119544 instr    1000 msg/s p50 0.089 p99 0.116 loss 0
+dgram 50x20 64B        new        38.97 us/msg   80085 instr    1000 msg/s p50 0.077 p99 0.101 loss 0
+stream 50x20 64B       old        46.51 us/msg  117901 instr    1000 msg/s p50 0.096 p99 0.13 loss 0
+stream 50x20 64B       new        37.24 us/msg   78797 instr    1000 msg/s p50 0.084 p99 0.112 loss 0
+dgram 250x20 64B       old           48 us/msg  173769 instr    5000 msg/s p50 0.198 p99 0.39 loss 0
+dgram 250x20 64B       new        22.53 us/msg   54027 instr    5000 msg/s p50 0.095 p99 0.165 loss 0
+stream 250x20 64B      old        48.21 us/msg  169032 instr    5000 msg/s p50 0.207 p99 0.427 loss 0
+stream 250x20 64B      new        23.77 us/msg   56919 instr    5000 msg/s p50 0.11 p99 0.183 loss 0
+dgram 1x200 64B        old        50.47 us/msg   95261 instr     200 msg/s p50 0.082 p99 0.1 loss 0
+dgram 1x200 64B        new        51.12 us/msg   95391 instr     200 msg/s p50 0.083 p99 0.1 loss 0
+stream 1x200 64B       old        48.79 us/msg   88591 instr     200 msg/s p50 0.082 p99 0.093 loss 0
+stream 1x200 64B       new        48.79 us/msg   88675 instr     200 msg/s p50 0.082 p99 0.103 loss 0

@@ -4,3 +4,5 @@ zig-pkg/
 node_modules/
 bench/wsload/wsload
 bench/netcode-*/
+bench/wtload/wtload
+bench/wtload/wtecho

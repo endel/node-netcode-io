@@ -184,7 +184,9 @@ And at the 99th percentile (p99):
 | 16 KiB, 50 clients, one in flight each | 1.13 ms | 1.37 ms | 1.21× |
 
 A broadcast of three messages to each member leaves each socket in one write
-here, where uWebSockets.js makes three, and at this rate falls behind. At
+here, where uWebSockets.js makes three, and at this rate falls behind. Both
+send to each member in a loop: uWebSockets.js's `publish` and `cork` aren't
+measured. At
 low rates netcode-io's p50 is 0–7 µs above uWebSockets.js's, about what one
 server varies by from run to run, and its p99 is lower in every row but
 64 KiB. One connection at 200 messages a second takes 31 µs there and back
@@ -206,8 +208,9 @@ connection. Its first 100,000 round lost one connection to the box's
 firewall, whose connection-tracking table was full of the run before
 (`nf_conntrack: table full, dropping packet`); the row is the second.
 
-`bench/run.mjs` reproduces the CPU and latency tables (`--transports
-uws,netcode`; `netcode-kept` adds the default mode).
+[`bench/README.md`](bench/README.md) has the method, the scripts that run a
+round on a fresh machine, what skews the numbers, and each round's raw data
+and findings.
 
 ## Building
 

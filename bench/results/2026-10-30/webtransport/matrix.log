@@ -1,0 +1,109 @@
+dgram 50x20 64B        netcode  r1    50.19 us/msg   125108 instr   186051 cyc     1000 msg/s  p50 0.091 p90 0.104 p99 0.122  loss 0 err 0 silent 0
+dgram 50x20 64B        go       r1   101.74 us/msg   208963 instr   352278 cyc     1000 msg/s  p50 0.073 p90 0.089 p99 0.104  loss 0 err 0 silent 0
+dgram 50x20 64B        zig      r1    65.44 us/msg   281978 instr   256093 cyc     1000 msg/s  p50 0.086 p90 0.108 p99 0.122  loss 0 err 0 silent 0
+dgram 50x20 64B        go       r2    99.26 us/msg   202589 instr   347625 cyc     1000 msg/s  p50 0.073 p90 0.089 p99 0.104  loss 0 err 0 silent 0
+dgram 50x20 64B        zig      r2    72.38 us/msg   316974 instr   283156 cyc     1000 msg/s  p50 0.084 p90 0.103 p99 0.115  loss 0 err 0 silent 0
+dgram 50x20 64B        netcode  r2    43.65 us/msg   113622 instr   161846 cyc     1000 msg/s  p50 0.09 p90 0.103 p99 0.121  loss 0 err 0 silent 0
+dgram 50x20 64B        zig      r3    71.89 us/msg   307965 instr   281275 cyc     1000 msg/s  p50 0.085 p90 0.105 p99 0.119  loss 0 err 0 silent 0
+dgram 50x20 64B        netcode  r3    44.29 us/msg   116538 instr   164477 cyc     1000 msg/s  p50 0.089 p90 0.102 p99 0.115  loss 0 err 0 silent 0
+dgram 50x20 64B        go       r3    98.23 us/msg   200153 instr   342915 cyc     1000 msg/s  p50 0.072 p90 0.088 p99 0.102  loss 0 err 0 silent 0
+stream 50x20 64B       netcode  r1    47.28 us/msg   119351 instr   175327 cyc     1000 msg/s  p50 0.096 p90 0.109 p99 0.123  loss 0 err 0 silent 0
+stream 50x20 64B       go       r1    79.67 us/msg   155270 instr   276389 cyc     1000 msg/s  p50 0.08 p90 0.095 p99 0.111  loss 0 err 0 silent 0
+stream 50x20 64B       zig      r1    80.13 us/msg   356030 instr   314239 cyc     1000 msg/s  p50 0.093 p90 0.114 p99 0.128  loss 0 err 0 silent 0
+stream 50x20 64B       go       r2    79.62 us/msg   154495 instr   276023 cyc     1000 msg/s  p50 0.079 p90 0.094 p99 0.111  loss 0 err 0 silent 0
+stream 50x20 64B       zig      r2    79.60 us/msg   361561 instr   312056 cyc     1000 msg/s  p50 0.091 p90 0.111 p99 0.123  loss 0 err 0 silent 0
+stream 50x20 64B       netcode  r2    46.68 us/msg   117946 instr   173308 cyc     1000 msg/s  p50 0.096 p90 0.113 p99 0.127  loss 0 err 0 silent 0
+stream 50x20 64B       zig      r3    79.01 us/msg   352190 instr   309928 cyc     1000 msg/s  p50 0.093 p90 0.114 p99 0.128  loss 0 err 0 silent 0
+stream 50x20 64B       netcode  r3    50.50 us/msg   126047 instr   187078 cyc     1000 msg/s  p50 0.096 p90 0.108 p99 0.121  loss 0 err 0 silent 0
+stream 50x20 64B       go       r3    78.31 us/msg   152991 instr   271475 cyc     1000 msg/s  p50 0.079 p90 0.095 p99 0.108  loss 0 err 0 silent 0
+dgram 250x20 64B       netcode  r1    48.38 us/msg   174494 instr   188373 cyc     5001 msg/s  p50 0.2 p90 0.318 p99 0.406  loss 0 err 0 silent 0
+dgram 250x20 64B       go       r1    60.35 us/msg   127661 instr   231756 cyc     5000 msg/s  p50 0.088 p90 0.122 p99 0.168  loss 0 err 0 silent 0
+dgram 250x20 64B       zig      r1    82.89 us/msg   374586 instr   329867 cyc     5000 msg/s  p50 0.32 p90 0.357 p99 0.394  loss 0 err 0 silent 0
+dgram 250x20 64B       go       r2    61.35 us/msg   130153 instr   235506 cyc     5000 msg/s  p50 0.088 p90 0.121 p99 0.159  loss 0 err 0 silent 0
+dgram 250x20 64B       zig      r2    80.40 us/msg   377717 instr   319938 cyc     5000 msg/s  p50 0.311 p90 0.351 p99 0.393  loss 0 err 0 silent 0
+dgram 250x20 64B       netcode  r2    48.11 us/msg   174623 instr   187466 cyc     5000 msg/s  p50 0.198 p90 0.312 p99 0.398  loss 0 err 0 silent 0
+dgram 250x20 64B       zig      r3    79.49 us/msg   360524 instr   316280 cyc     5000 msg/s  p50 0.319 p90 0.355 p99 0.395  loss 0 err 0 silent 0
+dgram 250x20 64B       netcode  r3    48.71 us/msg   176812 instr   189801 cyc     5000 msg/s  p50 0.198 p90 0.308 p99 0.395  loss 0 err 0 silent 0
+dgram 250x20 64B       go       r3    61.09 us/msg   129360 instr   234674 cyc     5000 msg/s  p50 0.088 p90 0.121 p99 0.167  loss 0 err 0 silent 0
+stream 250x20 64B      netcode  r1    47.74 us/msg   168697 instr   186189 cyc     5000 msg/s  p50 0.205 p90 0.32 p99 0.425  loss 0 err 0 silent 0
+stream 250x20 64B      go       r1    50.77 us/msg    99934 instr   190313 cyc     5000 msg/s  p50 0.092 p90 0.127 p99 0.167  loss 0 err 0 silent 0
+stream 250x20 64B      zig      r1    88.71 us/msg   425414 instr   353110 cyc     5000 msg/s  p50 0.354 p90 0.394 p99 0.436  loss 0 err 0 silent 0
+stream 250x20 64B      go       r2    51.28 us/msg   100707 instr   191999 cyc     5000 msg/s  p50 0.092 p90 0.127 p99 0.166  loss 0 err 0 silent 0
+stream 250x20 64B      zig      r2    96.02 us/msg   463962 instr   382335 cyc     5000 msg/s  p50 0.349 p90 0.389 p99 0.427  loss 0 err 0 silent 0
+stream 250x20 64B      netcode  r2    48.51 us/msg   170891 instr   189288 cyc     5000 msg/s  p50 0.204 p90 0.308 p99 0.415  loss 0 err 0 silent 0
+stream 250x20 64B      zig      r3    92.44 us/msg   443706 instr   368030 cyc     5000 msg/s  p50 0.355 p90 0.399 p99 0.445  loss 0 err 0 silent 0
+stream 250x20 64B      netcode  r3    49.15 us/msg   174399 instr   191735 cyc     5001 msg/s  p50 0.205 p90 0.325 p99 0.418  loss 0 err 0 silent 0
+stream 250x20 64B      go       r3    50.74 us/msg   100332 instr   190039 cyc     5000 msg/s  p50 0.092 p90 0.127 p99 0.167  loss 0 err 0 silent 0
+dgram 1x200 64B        netcode  r1    51.35 us/msg    95293 instr   183759 cyc      200 msg/s  p50 0.083 p90 0.094 p99 0.101  loss 0 err 0 silent 0
+dgram 1x200 64B        go       r1    76.17 us/msg   145744 instr   265548 cyc      200 msg/s  p50 0.085 p90 0.097 p99 0.106  loss 0 err 0 silent 0
+dgram 1x200 64B        zig      r1    26.88 us/msg    55322 instr    97838 cyc      200 msg/s  p50 0.064 p90 0.072 p99 0.08  loss 0 err 0 silent 0
+dgram 1x200 64B        go       r2    77.65 us/msg   148160 instr   270959 cyc      200 msg/s  p50 0.085 p90 0.1 p99 0.107  loss 0 err 0 silent 0
+dgram 1x200 64B        zig      r2    26.69 us/msg    55363 instr    97032 cyc      200 msg/s  p50 0.065 p90 0.072 p99 0.078  loss 0 err 0 silent 0
+dgram 1x200 64B        netcode  r2    50.58 us/msg    95418 instr   181147 cyc      200 msg/s  p50 0.081 p90 0.092 p99 0.097  loss 0 err 0 silent 0
+dgram 1x200 64B        zig      r3    27.22 us/msg    55398 instr    99023 cyc      200 msg/s  p50 0.066 p90 0.073 p99 0.083  loss 0 err 0 silent 0
+dgram 1x200 64B        netcode  r3    50.66 us/msg    95382 instr   181342 cyc      200 msg/s  p50 0.082 p90 0.093 p99 0.097  loss 0 err 0 silent 0
+dgram 1x200 64B        go       r3    76.51 us/msg   146313 instr   265738 cyc      200 msg/s  p50 0.085 p90 0.091 p99 0.098  loss 0 err 0 silent 0
+stream 1x200 64B       netcode  r1    48.81 us/msg    88718 instr   176309 cyc      200 msg/s  p50 0.083 p90 0.086 p99 0.093  loss 0 err 0 silent 0
+stream 1x200 64B       go       r1    88.70 us/msg   163499 instr   298016 cyc      200 msg/s  p50 0.082 p90 0.089 p99 0.104  loss 0 err 0 silent 0
+stream 1x200 64B       zig      r1    22.24 us/msg    46287 instr    82284 cyc      200 msg/s  p50 0.06 p90 0.063 p99 0.069  loss 0 err 0 silent 0
+stream 1x200 64B       go       r2    89.06 us/msg   163878 instr   299211 cyc      200 msg/s  p50 0.083 p90 0.088 p99 0.098  loss 0 err 0 silent 0
+stream 1x200 64B       zig      r2    22.41 us/msg    46522 instr    82942 cyc      200 msg/s  p50 0.06 p90 0.064 p99 0.069  loss 0 err 0 silent 0
+stream 1x200 64B       netcode  r2    49.86 us/msg    88773 instr   179778 cyc      200 msg/s  p50 0.083 p90 0.088 p99 0.102  loss 0 err 0 silent 0
+stream 1x200 64B       zig      r3    22.91 us/msg    46527 instr    84729 cyc      200 msg/s  p50 0.061 p90 0.064 p99 0.07  loss 0 err 0 silent 0
+stream 1x200 64B       netcode  r3    50.35 us/msg    89188 instr   182052 cyc      200 msg/s  p50 0.084 p90 0.089 p99 0.098  loss 0 err 0 silent 0
+stream 1x200 64B       go       r3    88.79 us/msg   164000 instr   298302 cyc      200 msg/s  p50 0.083 p90 0.088 p99 0.095  loss 0 err 0 silent 0
+dgram 50 closed 64B    netcode  r1    10.93 us/msg    40279 instr    42845 cyc   104570 msg/s  p50 0.46 p90 0.715 p99 0.998  loss 0 err 0 silent 0
+dgram 50 closed 64B    go       r1    25.11 us/msg    74705 instr    99971 cyc    83345 msg/s  p50 0.49 p90 0.934 p99 3.479  loss 0 err 0 silent 0
+dgram 50 closed 64B    zig      r1     9.46 us/msg    40588 instr    37759 cyc   105079 msg/s  p50 0.44 p90 0.792 p99 1.169  loss 0 err 0 silent 0
+dgram 50 closed 64B    go       r2    25.11 us/msg    74727 instr   100000 cyc    82850 msg/s  p50 0.492 p90 0.936 p99 3.538  loss 0 err 0 silent 0
+dgram 50 closed 64B    zig      r2     9.48 us/msg    40598 instr    37826 cyc   104885 msg/s  p50 0.441 p90 0.793 p99 1.17  loss 0 err 0 silent 0
+dgram 50 closed 64B    netcode  r2    10.94 us/msg    40351 instr    42900 cyc   104678 msg/s  p50 0.459 p90 0.715 p99 0.99  loss 0 err 0 silent 0
+dgram 50 closed 64B    zig      r3     9.47 us/msg    40549 instr    37768 cyc   105057 msg/s  p50 0.44 p90 0.791 p99 1.161  loss 0 err 0 silent 0
+dgram 50 closed 64B    netcode  r3    10.96 us/msg    40448 instr    42922 cyc   104527 msg/s  p50 0.46 p90 0.718 p99 1.002  loss 0 err 0 silent 0
+dgram 50 closed 64B    go       r3    25.12 us/msg    74724 instr   100049 cyc    83133 msg/s  p50 0.492 p90 0.938 p99 3.477  loss 0 err 0 silent 0
+stream 50 closed 64B   netcode  r1     9.80 us/msg    38283 instr    38600 cyc   114547 msg/s  p50 0.416 p90 0.615 p99 0.973  loss 0 err 0 silent 0
+stream 50 closed 64B   go       r1    21.18 us/msg    55800 instr    84359 cyc    99219 msg/s  p50 0.446 p90 0.735 p99 2.978  loss 0 err 0 silent 0
+stream 50 closed 64B   zig      r1     8.27 us/msg    37373 instr    33007 cyc   120666 msg/s  p50 0.382 p90 0.689 p99 0.979  loss 0 err 0 silent 0
+stream 50 closed 64B   go       r2    21.17 us/msg    55687 instr    84326 cyc    99200 msg/s  p50 0.443 p90 0.735 p99 3.116  loss 0 err 0 silent 0
+stream 50 closed 64B   zig      r2     8.29 us/msg    37098 instr    33066 cyc   120450 msg/s  p50 0.382 p90 0.683 p99 0.977  loss 0 err 0 silent 0
+stream 50 closed 64B   netcode  r2     9.78 us/msg    38416 instr    38496 cyc   114741 msg/s  p50 0.417 p90 0.615 p99 0.976  loss 0 err 0 silent 0
+stream 50 closed 64B   zig      r3     8.25 us/msg    37354 instr    32927 cyc   120958 msg/s  p50 0.381 p90 0.687 p99 0.974  loss 0 err 0 silent 0
+stream 50 closed 64B   netcode  r3     9.83 us/msg    38640 instr    38697 cyc   114323 msg/s  p50 0.417 p90 0.619 p99 0.989  loss 0 err 0 silent 0
+stream 50 closed 64B   go       r3    21.16 us/msg    55612 instr    84259 cyc    98764 msg/s  p50 0.447 p90 0.737 p99 3.069  loss 0 err 0 silent 0
+dgram 50x20 1000B      netcode  r1    48.75 us/msg   127706 instr   180640 cyc     1000 msg/s  p50 0.093 p90 0.105 p99 0.119  loss 0 err 0 silent 0
+dgram 50x20 1000B      go       r1   105.80 us/msg   230328 instr   371684 cyc     1000 msg/s  p50 0.078 p90 0.096 p99 0.123  loss 0 err 0 silent 0
+dgram 50x20 1000B      zig      r1    74.02 us/msg   313247 instr   289754 cyc     1000 msg/s  p50 0.099 p90 0.12 p99 0.144  loss 0 err 0 silent 0
+dgram 50x20 1000B      go       r2   106.19 us/msg   227763 instr   374778 cyc     1000 msg/s  p50 0.078 p90 0.095 p99 0.118  loss 0 err 0 silent 0
+dgram 50x20 1000B      zig      r2    75.52 us/msg   324549 instr   295496 cyc     1000 msg/s  p50 0.088 p90 0.106 p99 0.119  loss 0 err 0 silent 0
+dgram 50x20 1000B      netcode  r2    49.11 us/msg   127811 instr   181936 cyc     1000 msg/s  p50 0.093 p90 0.107 p99 0.123  loss 0 err 0 silent 0
+dgram 50x20 1000B      zig      r3    66.18 us/msg   282925 instr   259055 cyc     1000 msg/s  p50 0.091 p90 0.113 p99 0.13  loss 0 err 0 silent 0
+dgram 50x20 1000B      netcode  r3    45.03 us/msg   118541 instr   167066 cyc     1000 msg/s  p50 0.095 p90 0.11 p99 0.13  loss 0 err 0 silent 0
+dgram 50x20 1000B      go       r3   104.56 us/msg   226385 instr   369750 cyc     1000 msg/s  p50 0.078 p90 0.095 p99 0.119  loss 0 err 0 silent 0
+== medians
+dgram 50x20 64B        netcode    44.29 us/msg  116538 instr    1000 msg/s p50 0.09 p99 0.121 loss 0
+dgram 50x20 64B        go         99.26 us/msg  202589 instr    1000 msg/s p50 0.073 p99 0.104 loss 0
+dgram 50x20 64B        zig        71.89 us/msg  307965 instr    1000 msg/s p50 0.085 p99 0.119 loss 0
+stream 50x20 64B       netcode    47.28 us/msg  119351 instr    1000 msg/s p50 0.096 p99 0.123 loss 0
+stream 50x20 64B       go         79.62 us/msg  154495 instr    1000 msg/s p50 0.079 p99 0.111 loss 0
+stream 50x20 64B       zig         79.6 us/msg  356030 instr    1000 msg/s p50 0.093 p99 0.128 loss 0
+dgram 250x20 64B       netcode    48.38 us/msg  174623 instr    5000 msg/s p50 0.198 p99 0.398 loss 0
+dgram 250x20 64B       go         61.09 us/msg  129360 instr    5000 msg/s p50 0.088 p99 0.167 loss 0
+dgram 250x20 64B       zig         80.4 us/msg  374586 instr    5000 msg/s p50 0.319 p99 0.394 loss 0
+stream 250x20 64B      netcode    48.51 us/msg  170891 instr    5000 msg/s p50 0.205 p99 0.418 loss 0
+stream 250x20 64B      go         50.77 us/msg  100332 instr    5000 msg/s p50 0.092 p99 0.167 loss 0
+stream 250x20 64B      zig        92.44 us/msg  443706 instr    5000 msg/s p50 0.354 p99 0.436 loss 0
+dgram 1x200 64B        netcode    50.66 us/msg   95382 instr     200 msg/s p50 0.082 p99 0.097 loss 0
+dgram 1x200 64B        go         76.51 us/msg  146313 instr     200 msg/s p50 0.085 p99 0.106 loss 0
+dgram 1x200 64B        zig        26.88 us/msg   55363 instr     200 msg/s p50 0.065 p99 0.08 loss 0
+stream 1x200 64B       netcode    49.86 us/msg   88773 instr     200 msg/s p50 0.083 p99 0.098 loss 0
+stream 1x200 64B       go         88.79 us/msg  163878 instr     200 msg/s p50 0.083 p99 0.098 loss 0
+stream 1x200 64B       zig        22.41 us/msg   46522 instr     200 msg/s p50 0.06 p99 0.069 loss 0
+dgram 50 closed 64B    netcode    10.94 us/msg   40351 instr  104570 msg/s p50 0.46 p99 0.998 loss 0
+dgram 50 closed 64B    go         25.11 us/msg   74724 instr   83133 msg/s p50 0.492 p99 3.479 loss 0
+dgram 50 closed 64B    zig         9.47 us/msg   40588 instr  105057 msg/s p50 0.44 p99 1.169 loss 0
+stream 50 closed 64B   netcode      9.8 us/msg   38416 instr  114547 msg/s p50 0.417 p99 0.976 loss 0
+stream 50 closed 64B   go         21.17 us/msg   55687 instr   99200 msg/s p50 0.446 p99 3.069 loss 0
+stream 50 closed 64B   zig         8.27 us/msg   37354 instr  120666 msg/s p50 0.382 p99 0.977 loss 0
+dgram 50x20 1000B      netcode    48.75 us/msg  127706 instr    1000 msg/s p50 0.093 p99 0.123 loss 0
+dgram 50x20 1000B      go         105.8 us/msg  227763 instr    1000 msg/s p50 0.078 p99 0.119 loss 0
+dgram 50x20 1000B      zig        74.02 us/msg  313247 instr    1000 msg/s p50 0.091 p99 0.13 loss 0

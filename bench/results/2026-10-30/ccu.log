@@ -1,0 +1,16 @@
+ccu 10000 | uws      | r1 | connect 0.6 s | failed 0 | rss 62 MB (1.4 KB/conn) | cpu 0.17 cores | 17.11 us/msg | 10000 msg/s | p50 0.106 | p99 0.302
+ccu 10000 | netcode  | r1 | connect 0.4 s | failed 0 | rss 68 MB (2.0 KB/conn) | cpu 0.14 cores | 13.62 us/msg | 10000 msg/s | p50 0.089 | p99 0.219
+ccu 10000 | netcode  | r2 | connect 0.4 s | failed 0 | rss 69 MB (2.0 KB/conn) | cpu 0.15 cores | 14.72 us/msg | 10001 msg/s | p50 0.096 | p99 0.236
+ccu 10000 | uws      | r2 | connect 0.4 s | failed 0 | rss 61 MB (1.3 KB/conn) | cpu 0.15 cores | 15.47 us/msg | 10000 msg/s | p50 0.092 | p99 0.255
+ccu 25000 | uws      | r1 | connect 4.3 s | failed 0 | rss 70 MB (0.9 KB/conn) | cpu 0.38 cores | 15.38 us/msg | 25000 msg/s | p50 0.233 | p99 0.686
+ccu 25000 | netcode  | r1 | connect 4.3 s | failed 0 | rss 84 MB (1.5 KB/conn) | cpu 0.33 cores | 13.16 us/msg | 25002 msg/s | p50 0.202 | p99 0.548
+ccu 25000 | netcode  | r2 | connect 4.5 s | failed 0 | rss 85 MB (1.5 KB/conn) | cpu 0.32 cores | 12.98 us/msg | 25000 msg/s | p50 0.203 | p99 0.554
+ccu 25000 | uws      | r2 | connect 4.3 s | failed 0 | rss 70 MB (0.9 KB/conn) | cpu 0.36 cores | 14.50 us/msg | 25001 msg/s | p50 0.221 | p99 0.623
+ccu 50000 | uws      | r1 | connect 3.7 s | failed 0 | rss 83 MB (0.7 KB/conn) | cpu 0.77 cores | 15.50 us/msg | 50002 msg/s | p50 0.323 | p99 1.109
+ccu 50000 | netcode  | r1 | connect 3.5 s | failed 0 | rss 110 MB (1.3 KB/conn) | cpu 0.64 cores | 12.77 us/msg | 50001 msg/s | p50 0.228 | p99 0.764
+ccu 50000 | netcode  | r2 | connect 3.7 s | failed 0 | rss 110 MB (1.3 KB/conn) | cpu 0.64 cores | 12.85 us/msg | 50001 msg/s | p50 0.23 | p99 0.782
+ccu 50000 | uws      | r2 | connect 3.7 s | failed 0 | rss 83 MB (0.7 KB/conn) | cpu 0.78 cores | 15.60 us/msg | 50002 msg/s | p50 0.32 | p99 1.132
+ccu 100000 | uws      | r1 | connect 7.7 s | failed 0 | rss 109 MB (0.6 KB/conn) | cpu 1.01 cores | 9.87 us/msg | 102247 msg/s | p50 885.995 | p99 1741.329
+ccu 100000 | netcode  | r1 | connect 145.6 s | failed 1 | rss 160 MB (1.1 KB/conn) | cpu 0.00 cores | 0.00 us/msg | 75003 msg/s | p50 0.351 | p99 2.697
+ccu 100000 | netcode  | r2 | connect 7.7 s | failed 0 | rss 180 MB (1.3 KB/conn) | cpu 1.00 cores | 9.77 us/msg | 102413 msg/s | p50 691.812 | p99 1370.057
+ccu 100000 | uws      | r2 | connect 7.6 s | failed 0 | rss 109 MB (0.6 KB/conn) | cpu 1.01 cores | 9.89 us/msg | 102107 msg/s | p50 884.359 | p99 1739.605

@@ -25,6 +25,10 @@ function join(member) {
   room.push(member);
   return room;
 }
+function leave(room, member) {
+  const i = room ? room.indexOf(member) : -1;
+  if (i >= 0) { room.splice(i, 1); }
+}
 // netcode-DIR: another build's lib/ and zig-out/ copied to ./netcode-DIR, for A/B runs
 // netcode-kept: this tree, messages kept past the call; netcode-DIR: a snapshot
 const KEPT = name === 'netcode-kept';
@@ -53,6 +57,8 @@ if (name === 'uws') {
     idleTimeout: 0,
     compression: uWS.DISABLED,
     open: (ws) => { if (roomSize) { ws.getUserData().room = join(ws); } },
+    // uWS throws on a send to a closed socket: a run ending mid-broadcast crashed it
+    close: (ws) => { leave(ws.getUserData().room, ws); },
     message: (ws, msg, isBinary) => {
       messages++; work();
       if (roomSize === 0) { ws.send(msg, isBinary); return; }
@@ -69,6 +75,7 @@ if (name === 'uws') {
   const roomOf = new Map();
   server = new Server({ host: HOST, port, cert: CERT, key: KEY, websocket: { tls, maxConnections: 1 << 20, pingInterval: 0, maxMessageSize: 1 << 20, maxSendBuffer: 16 << 20, transientMessages: !KEPT, thread: process.env.NETCODE_THREAD } }, {
     onWsOpen: (ws) => { if (roomSize) { roomOf.set(ws, join(ws)); } },
+    onWsClose: (ws) => { leave(roomOf.get(ws), ws); roomOf.delete(ws); },
     onWsMessage: (ws, data, isText) => {
       messages++; work();
       if (roomSize === 0) { server.send(ws, data, isText); return; }
