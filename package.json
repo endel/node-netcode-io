@@ -33,7 +33,7 @@
     "test": "zig build test && node --test --test-timeout=20000 test/*.test.js && NETCODE_IO_THREAD=quic node --test --test-timeout=20000 test/*.test.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "keywords": [
     "webtransport",

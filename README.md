@@ -11,8 +11,8 @@ Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later) and macOS on
 Apple silicon. The x64 build needs x86-64-v3 with AES-NI, which servers have
 had since 2013. Other platforms build from source (below).
 
-It is an ES module only. CommonJS can still `require()` it on Node.js
-20.19 and 22.12 or later, which load ES modules that way.
+It needs Node.js 22 or later, and is an ES module only: CommonJS can still
+`require()` it from Node.js 22.12, which loads ES modules that way.
 
 ```js
 import { Server } from 'netcode-io';
