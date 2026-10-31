@@ -240,7 +240,7 @@ npm test                           # Zig wire tests, then node --test with each 
 ```
 
 `lib/binding.js` loads `zig-out/lib/netcode_io.node` when it exists, and
-otherwise `netcode-io-<platform>-<arch>`, the package npm installed for this
+otherwise `@netcode-io/<platform>-<arch>`, the package npm installed for this
 machine. A new `version` in `package.json` on main, with its
 `optionalDependencies` to match, builds those on each platform, tests them,
 publishes them and tags the commit (`.github/workflows/release.yml`).

@@ -15,11 +15,11 @@ const platforms = {
 };
 
 for (const [platform, t] of Object.entries(platforms)) {
-  const name = `netcode-io-${platform}`;
+  const name = `@netcode-io/${platform}`;
   if (root.optionalDependencies?.[name] !== root.version) {
     throw new Error(`package.json: optionalDependencies["${name}"] should be "${root.version}"`);
   }
-  const dir = path.join(out, name);
+  const dir = path.join(out, platform);
   fs.mkdirSync(dir, { recursive: true });
   fs.copyFileSync(path.join(artifacts, platform, 'netcode_io.node'), path.join(dir, 'netcode_io.node'));
   const rev = fs.readFileSync(path.join(artifacts, platform, 'quic-zig.rev'), 'utf8').trim();
