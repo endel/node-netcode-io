@@ -309,22 +309,24 @@ test('a buffer sent twice still arrives right when its turn spans several batche
   // Past 1 MiB a turn's commands go out in more than one batch, and the loop
   // thread may take two at once: the second's references must still resolve
   // within that batch.
-  const ids = [];
-  const server = new Server(options, { onWsOpen(id) { ids.push(id); } });
+  const ids = new Map();
+  const server = new Server(options, { onWsOpen(id, req) { ids.set(req.path, id); } });
   t.after(() => server.stop());
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    ids.length = 0;
-    const [big, a, b] = await Promise.all([1, 2, 3].map(() => open(`ws://127.0.0.1:${server.port}/`)));
-    while (ids.length < 3) { await new Promise((r) => setTimeout(r, 5)); }
+    ids.clear();
+    // told apart by path: the server sees them open in no set order
+    const [big, a, b] = await Promise.all(['/big', '/a', '/b'].map((p) => open(`ws://127.0.0.1:${server.port}${p}`)));
+    while (ids.size < 3) { await new Promise((r) => setTimeout(r, 5)); }
 
     const shared = new Uint8Array(100).map((_, i) => (i * 7 + attempt) & 0xff);
     const got = [next(a), next(b)];
-    for (let i = 0; i < 40; i++) { server.send(ids[0], new Uint8Array(64 * 1024).fill(i)); }
-    server.send(ids[1], shared);
-    server.send(ids[2], shared);
+    for (let i = 0; i < 40; i++) { server.send(ids.get('/big'), new Uint8Array(64 * 1024).fill(i)); }
+    server.send(ids.get('/a'), shared);
+    server.send(ids.get('/b'), shared);
     for (const data of await Promise.all(got)) {
-      assert.deepStrictEqual(new Uint8Array(data), shared, `attempt ${attempt}`);
+      // not deepStrictEqual: its diff of a 64 KiB mismatch outlasts --test-timeout
+      assert.ok(Buffer.from(data).equals(shared), `attempt ${attempt}: ${data.byteLength} bytes`);
     }
     [big, a, b].forEach((ws) => ws.close());
   }
