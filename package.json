@@ -1,6 +1,6 @@
 {
   "name": "netcode-io",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "WebSocket and WebTransport server for Node.js, powered by quic-zig",
   "repository": {
     "type": "git",
@@ -24,14 +24,14 @@
     "lib"
   ],
   "optionalDependencies": {
-    "@netcode-io/darwin-arm64": "0.0.3",
-    "@netcode-io/darwin-x64": "0.0.3",
-    "@netcode-io/linux-arm64": "0.0.3",
-    "@netcode-io/linux-arm64-musl": "0.0.3",
-    "@netcode-io/linux-x64": "0.0.3",
-    "@netcode-io/linux-x64-musl": "0.0.3",
-    "@netcode-io/win32-arm64": "0.0.3",
-    "@netcode-io/win32-x64": "0.0.3"
+    "@netcode-io/darwin-arm64": "0.0.4",
+    "@netcode-io/darwin-x64": "0.0.4",
+    "@netcode-io/linux-arm64": "0.0.4",
+    "@netcode-io/linux-arm64-musl": "0.0.4",
+    "@netcode-io/linux-x64": "0.0.4",
+    "@netcode-io/linux-x64-musl": "0.0.4",
+    "@netcode-io/win32-arm64": "0.0.4",
+    "@netcode-io/win32-x64": "0.0.4"
   },
   "scripts": {
     "build": "zig build -Doptimize=ReleaseFast",

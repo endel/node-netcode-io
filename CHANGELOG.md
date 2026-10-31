@@ -3,7 +3,7 @@
 Notable changes to netcode-io. Versions follow [semantic versioning](https://semver.org);
 `Unreleased` collects what has landed on `main` since the last release.
 
-## Unreleased
+## 0.0.4
 
 ### Added
 

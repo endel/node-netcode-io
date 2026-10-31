@@ -1,6 +1,6 @@
 .{
     .name = .netcode_io,
-    .version = "0.0.3",
+    .version = "0.0.4",
     .fingerprint = 0x3f2effd5a87221bc,
     .dependencies = .{
         .quic = .{ .path = "../quic-zig" },
