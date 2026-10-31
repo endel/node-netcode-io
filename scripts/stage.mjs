@@ -9,9 +9,13 @@ const [artifacts, out] = process.argv.slice(2);
 const root = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const platforms = {
   'linux-x64': { os: 'linux', cpu: 'x64', libc: 'glibc' },
+  'linux-x64-musl': { os: 'linux', cpu: 'x64', libc: 'musl' },
   'linux-arm64': { os: 'linux', cpu: 'arm64', libc: 'glibc' },
+  'linux-arm64-musl': { os: 'linux', cpu: 'arm64', libc: 'musl' },
   'darwin-arm64': { os: 'darwin', cpu: 'arm64' },
+  'darwin-x64': { os: 'darwin', cpu: 'x64' },
   'win32-x64': { os: 'win32', cpu: 'x64' },
+  'win32-arm64': { os: 'win32', cpu: 'arm64' },
 };
 
 for (const [platform, t] of Object.entries(platforms)) {

@@ -7,8 +7,9 @@ WebSocket and WebTransport on one port for Node.js, served by
 npm install netcode-io
 ```
 
-Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later), macOS on Apple
-silicon, and Windows on x64. The x64 builds need x86-64-v3 with AES-NI, which
+Prebuilt for Linux on x64 and arm64 (glibc 2.28 or later, or musl, as on
+Alpine), macOS 13 or later on Apple silicon and Intel, and Windows on x64 and
+arm64. The Linux and Windows x64 builds need x86-64-v3 with AES-NI, which
 servers have had since 2013. Other platforms build from source (below).
 
 It needs Node.js 22 or later, and is an ES module only: CommonJS can still
@@ -255,8 +256,6 @@ publishes them and tags the commit (`.github/workflows/release.yml`).
   WebSockets on connections of their own.
 - WebSocket backpressure: past `maxSendBuffer` the socket is closed with
   1008, and reads never pause.
-- Prebuilt packages for Intel Macs, musl Linux (Alpine) and Windows on arm64:
-  those build from source.
 - Hosts other than `node.exe` on Windows: the addon imports Node-API from it by
   name, so Electron or a renamed binary can't load it.
 

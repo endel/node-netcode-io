@@ -39,9 +39,14 @@ jobs:
           # AES-NI and PCLMUL aren't in x86-64-v3: without them TLS and QUIC
           # fall back to software crypto, ~35x slower
           - { os: ubuntu-latest, pkg: linux-x64, target: x86_64-linux-gnu.2.28, cpu: x86_64_v3+aes+pclmul }
+          - { os: ubuntu-latest, pkg: linux-x64-musl, target: x86_64-linux-musl, cpu: x86_64_v3+aes+pclmul, image: node:22-alpine }
           - { os: ubuntu-24.04-arm, pkg: linux-arm64, target: aarch64-linux-gnu.2.28, cpu: generic+aes+sha2 }
+          - { os: ubuntu-24.04-arm, pkg: linux-arm64-musl, target: aarch64-linux-musl, cpu: generic+aes+sha2, image: node:22-alpine }
           - { os: macos-latest, pkg: darwin-arm64, target: aarch64-macos.13.0, cpu: apple_m1 }
+          # v2: x64 Node on Apple silicon runs this under Rosetta, which reports no AVX
+          - { os: macos-26-intel, pkg: darwin-x64, target: x86_64-macos.13.0, cpu: x86_64_v2+aes+pclmul }
           - { os: windows-latest, pkg: win32-x64, target: x86_64-windows-gnu, cpu: x86_64_v3+aes+pclmul }
+          - { os: windows-11-arm, pkg: win32-arm64, target: aarch64-windows-gnu, cpu: generic+aes+sha2 }
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -71,8 +76,18 @@ jobs:
       # the tests load zig-out's addon: the binary that ships
       # script-shell: npm's default on Windows, cmd, can't set a variable inline
       - name: Test
+        if: ${{ !matrix.image }}
         working-directory: netcode-io
         run: npm test --script-shell=bash
+
+      # Zig isn't in the image, and the wire tests never touch libc
+      - name: Test on Alpine
+        if: ${{ matrix.image }}
+        working-directory: netcode-io
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w ${{ matrix.image }} sh -c '
+            node --test --test-timeout=20000 test/*.test.js &&
+            NETCODE_IO_THREAD=quic node --test --test-timeout=20000 test/*.test.js'
 
       - name: Record the quic-zig it was built from
         run: git -C quic-zig rev-parse HEAD > netcode-io/zig-out/lib/quic-zig.rev

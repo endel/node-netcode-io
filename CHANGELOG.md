@@ -3,6 +3,13 @@
 Notable changes to netcode-io. Versions follow [semantic versioning](https://semver.org);
 `Unreleased` collects what has landed on `main` since the last release.
 
+## Unreleased
+
+### Added
+
+- Prebuilt packages for Intel Macs, musl Linux (Alpine) on x64 and arm64, and
+  Windows on arm64. `npm install` picks the right one.
+
 ## 0.0.3
 
 ### Added
