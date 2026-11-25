@@ -13,7 +13,8 @@ findings are in `results/<date>/`.
 - `server.mjs`: the server under test, an echo or room broadcast with nothing
   on top. `uws` is uWebSockets.js (`UWS=<path>`), `netcode` netcode-io with
   `transientMessages`, `netcode-kept` its default, and `netcode-<dir>` a build
-  copied to `./netcode-<dir>` for A/B runs.
+  copied to `./netcode-<dir>` for A/B runs. `@quic` after a netcode name
+  serves its WebSockets on the QUIC thread (`websocket.thread`).
 - `wsload/`: the WebSocket load client (Go). Paced (`-rate` per connection,
   `-spread`) or closed loop (`-rate 0 -inflight n`); prints one JSON line.
 - `wtload/`: the same for WebTransport, datagrams or one bidi stream per
@@ -54,6 +55,39 @@ bench/baremetal/vultr.sh delete            # it bills until deleted
 Results land in `$OUT` (default `/root/netcode/results`). `SERVER_CPUS` and
 `CLIENT_CPUS` pin the server and the load to separate cores; the defaults
 fit 6 cores with SMT.
+
+## On Windows
+
+`run.mjs` and `wsload` run there as they are, from Git Bash or PowerShell,
+with uWebSockets.js's `uws_win32_x64_<abi>.node` beside its `uws.js`:
+
+```sh
+zig build -Doptimize=ReleaseFast -Dtarget=x86_64-windows-gnu -Dcpu=x86_64_v3+aes+pclmul   # as released
+(cd bench/wsload && go build -o wsload.exe .)
+cd bench
+UWS=/path/to/uWebSockets.js GOMAXPROCS=4 node run.mjs --transports uws,netcode,netcode@quic --out matrix.json
+```
+
+`netcode@quic` is netcode-io with `websocket.thread: 'quic'`; `@node` and
+`@quic` go after any transport. What differs from Linux:
+
+- **CPU** comes from the server's cycle time, which `wsload -pid` reads
+  (`QueryProcessCycleTime`). Windows charges `process.cpuUsage` a clock tick
+  at a time, 5–15% off for a server that wakes for short bursts; that figure
+  is kept as `processCpu`.
+- **Latency.** Go's monotonic clock on Windows moves once per timer
+  interrupt, every 0.5 to 15.6 ms, so `wsload` times round trips with
+  `QueryPerformanceCounter`.
+- **WebTransport.** `wtload` builds as `wtload.exe` the same way. From Git
+  Bash, `-path /` needs `MSYS_NO_PATHCONV=1`, or it arrives as Git's
+  install directory.
+- **Held connections.** Windows hands out about 16,000 client ports, from
+  49152 up, so `ccu 10000 @1/s` is as many as one machine runs without
+  `netsh int ipv4 set dynamicport tcp`.
+- **No hardware counters, and the clock moves.** `counters.sh`,
+  `profile.sh` and the other `baremetal/` scripts are Linux's. On a laptop
+  the power plan and turbo move the clock under both servers alike: paired
+  rounds still compare them, but don't compare a figure with Linux's.
 
 ## Method
 

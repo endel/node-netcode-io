@@ -34,7 +34,6 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -70,10 +69,6 @@ const (
 )
 
 var echoPrefix = []byte("Echo: ")
-
-var epoch = time.Now()
-
-func now() int64 { return int64(time.Since(epoch)) }
 
 var (
 	running     atomic.Bool
@@ -343,11 +338,6 @@ func closeAll(all []*session) {
 	}
 }
 
-func cpuSeconds() float64 {
-	var ru syscall.Rusage
-	syscall.Getrusage(syscall.RUSAGE_SELF, &ru)
-	return float64(ru.Utime.Sec+ru.Stime.Sec) + float64(ru.Utime.Usec+ru.Stime.Usec)/1e6
-}
 
 func main() {
 	flag.Parse()

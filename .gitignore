@@ -3,6 +3,9 @@ zig-out/
 zig-pkg/
 node_modules/
 bench/wsload/wsload
+bench/wsload/wsload.exe
 bench/netcode-*/
 bench/wtload/wtload
 bench/wtload/wtecho
+bench/wtload/wtload.exe
+bench/wtload/wtecho.exe

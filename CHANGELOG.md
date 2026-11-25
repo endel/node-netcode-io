@@ -3,6 +3,30 @@
 Notable changes to netcode-io. Versions follow [semantic versioning](https://semver.org);
 `Unreleased` collects what has landed on `main` since the last release.
 
+## Unreleased
+
+### Added
+
+- `server.stats().loopCpu` on Windows, and the QUIC thread is named
+  `netcode-io` there for profilers, as on Linux and macOS.
+- `bench/` runs on Windows: `wsload` and `wtload` build there and time round
+  trips with `QueryPerformanceCounter`, and `run.mjs` reads the server's CPU
+  from its cycle time. `run.mjs` also reports memory per connection, and
+  takes `netcode@quic` for `websocket.thread: 'quic'`.
+
+### Changed
+
+- On Windows, with quic-zig's readiness reads: an idle WebSocket holds
+  2.6 KB instead of 18.6, a message larger than 16 KiB is read in one go,
+  and one of 32 KiB or more reaches a `transientMessages` handler without a
+  copy, as on Linux.
+
+### Fixed
+
+- On Windows, events that arrived together could reach JS out of order, the
+  first last: two HTTP requests on separate connections were handled the
+  wrong way round in about half the runs.
+
 ## 0.0.4
 
 ### Added

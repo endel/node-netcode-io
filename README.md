@@ -81,7 +81,9 @@ would hold them up; TCP's run in the kernel regardless.
 WebSockets and plain HTTP run on Node's thread by default, as with `ws` or
 uWebSockets.js. quic-zig's listener runs on a libxev loop of its own whose
 kqueue or epoll fd libuv polls, so Node wakes for it as for one of its own
-sockets. Each wake reads the sockets that are ready and hands JS what came
+sockets. A completion port has no fd to poll: on Windows a thread waits on
+it and wakes Node through a `uv_async`, once per wake, however many sockets
+it brings. Each wake reads the sockets that are ready and hands JS what came
 of it in one call, where uWebSockets.js calls JS once per message; a wake
 with more to read hands over what is 20 µs old and reads on. The commands
 JS answers with are written to the sockets before the call returns. On
@@ -115,10 +117,10 @@ each record a 24-byte header and a payload (`src/wire.zig`, mirrored in
   Buffer reused for every batch, as uWebSockets.js lends its messages: a
   message is valid only during its `onWsMessage` call, copied once on its
   way in, and nothing is allocated per delivery for the garbage collector
-  to reclaim. On Linux a message of 32 KiB or more isn't copied at all: JS
-  gets a view of quic-zig's read buffer, in a call of its own before the
-  next read. Each `onHttpRequest` request ends a call into JS, so the
-  microtasks it starts run before the next one, as between an
+  to reclaim. On Linux and Windows a message of 32 KiB or more isn't copied
+  at all: JS gets a view of quic-zig's read buffer, in a call of its own
+  before the next read. Each `onHttpRequest` request ends a call into JS,
+  so the microtasks it starts run before the next one, as between an
   `http.Server`'s 'request' events.
 
 Past 8 MiB of events waiting for JS, stream and raw connection reads
@@ -223,6 +225,39 @@ latency there is queueing. netcode-io takes about twice the memory per
 connection. Its first 100,000 round lost one connection to the box's
 firewall, whose connection-tracking table was full of the run before
 (`nf_conntrack: table full, dropping packet`); the row is the second.
+
+### On Windows
+
+The same servers and load on a Windows 11 laptop (Core i7-11800H, turbo on,
+Balanced power plan), Node.js 22.23, uWebSockets.js 20.71: CPU from the
+server's cycle time, medians of 3 paired rounds. Both servers take two to
+three times the CPU per message they take in the Linux round above, on
+another machine: compare within the table, not across.
+
+| | netcode-io | uWebSockets.js | Less CPU | p50 | p99 |
+|---|---:|---:|---:|---:|---:|
+| Echo, 500 clients × 20/s | 24.2 µs | 29.4 µs | 1.21× | 0.147 vs 0.155 ms | 0.61 vs 0.75 ms |
+| Echo, 2,000 clients × 20/s | 20.5 µs | 22.6 µs | 1.10× | 0.59 vs 0.84 ms | 9.2 vs 9.8 ms |
+| Echo, 2,000 clients × 20/s, TLS | 20.8 µs | 24.4 µs | 1.17× | 0.43 vs 1.14 ms | 6.1 vs 8.9 ms |
+| Echo, 500 clients, one in flight each | 15.4 µs | 17.0 µs | 1.10× | 7.6 vs 8.4 ms | 10.6 vs 12.1 ms |
+| Broadcast, 32 rooms of 32, 2/s each | 437 µs | 461 µs | 1.06× | 1.6 vs 2.8 ms | 7.7 vs 12.6 ms |
+| Broadcast, 32 rooms of 32, 2/s, 3 messages each | 440 µs | – | uWebSockets.js falls behind | 1.7 ms vs 14.5 s | 10.1 ms vs 31.4 s |
+| 1 KiB, 500 clients × 20/s | 26.3 µs | 36.1 µs | 1.37× | 0.144 vs 0.176 ms | 0.81 vs 1.16 ms |
+| 16 KiB, 200 clients × 20/s | 37.8 µs | 53.7 µs | 1.42× | 0.114 vs 0.140 ms | 0.45 vs 0.70 ms |
+| 16 KiB, 200 clients × 20/s, TLS | 61.1 µs | 72.8 µs | 1.19× | 0.182 vs 0.195 ms | 0.71 vs 0.91 ms |
+| 64 KiB, 50 clients × 20/s | 110 µs | 149 µs | 1.35× | 0.23 vs 0.41 ms | 1.00 vs 1.09 ms |
+| 64 KiB, 50 clients × 20/s, TLS | 196 µs | 324 µs | 1.65× | 0.34 vs 0.71 ms | 1.34 vs 1.76 ms |
+| 16 KiB, 50 clients, one in flight each | 19.5 µs | 25.9 µs | 1.33× | 0.91 vs 1.24 ms | 1.89 vs 2.75 ms |
+| 10,000 held connections × 1/s | 29.6 µs | 36.5 µs | 1.23× | 0.156 vs 0.170 ms | 0.91 vs 1.15 ms |
+
+Held, the 10,000 connections took 2.6 KB each against uWebSockets.js's
+1.4 KB. With one message in flight per client, netcode-io answers 64.9k
+messages a second to 58.9k (1.10×), and at 16 KiB 53.1k to 39.6k (1.34×).
+`websocket.thread: 'quic'` costs about what Node's thread does up to 1 KiB
+and up to twice as much at 64 KiB, the price of copying a large message
+across threads and back. Broadcasts at 4/s take more than a core on this
+machine for both servers; [`bench/results/2026-11-25-windows`](bench/results/2026-11-25-windows)
+has that row and the rest.
 
 [`bench/README.md`](bench/README.md) has the method, the scripts that run a
 round on a fresh machine, what skews the numbers, and each round's raw data

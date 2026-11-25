@@ -49,6 +49,9 @@ const CELLS = [
   { name: 'spread 2000 @20/s', c: 2000, rate: 20, spread: true },
   { name: 'spread 2000 @20/s tls', c: 2000, rate: 20, spread: true, tls: true },
   { name: 'spread 2000 @20/s work5', c: 2000, rate: 20, spread: true, work: 5 },
+  // held connections, one message a second each; memory per connection
+  // (Windows hands out ~16k client ports by default, so no higher there)
+  { name: 'ccu 10000 @1/s', c: 10000, rate: 1, spread: true },
 ];
 
 let port = 31000;
@@ -65,12 +68,12 @@ async function runOnce(cell, transport) {
     stdio: ['ignore', 'inherit', 'inherit', 'ipc'], execArgv: ['--no-warnings'],
   });
   try {
-    await once(server, 'ready');
+    const { rss: rss0 } = await once(server, 'ready');
     const args = ['-addr', `127.0.0.1:${p}`, '-c', String(cell.c), '-rate', String(cell.rate), '-inflight', String(cell.inflight ?? 1),
-      '-size', String(cell.size ?? 50), '-warmup', `${WARMUP}s`, '-duration', `${MEASURE}s`];
+      '-size', String(cell.size ?? 50), '-warmup', `${WARMUP}s`, '-duration', `${MEASURE}s`, '-pid', String(server.pid)];
     if (cell.tls) { args.push('-tls'); }
     if (cell.spread) { args.push('-spread'); }
-    const client = spawn(path.join(here, 'wsload', 'wsload'), args, { stdio: ['ignore', 'pipe', 'inherit'] });
+    const client = spawn(path.join(here, 'wsload', process.platform === 'win32' ? 'wsload.exe' : 'wsload'), args, { stdio: ['ignore', 'pipe', 'inherit'] });
     const lines = readline.createInterface({ input: client.stdout });
     let metrics;
     let result;
@@ -83,7 +86,12 @@ async function runOnce(cell, transport) {
       }
     }
     const m = await metrics;
-    return { ...m, ...result };
+    // Windows charges process.cpuUsage a clock tick at a time: wsload reads
+    // the server's cycle time there, which is exact. `processCpu` keeps the other.
+    const { serverCpu, ...rest } = result ?? {};
+    // what each connection added to the server's resident memory
+    const kbPerConn = (m.rss - rss0) / 1024 / cell.c;
+    return serverCpu === undefined ? { ...m, ...rest, kbPerConn } : { ...m, ...rest, kbPerConn, cpu: serverCpu, processCpu: m.cpu };
   } finally {
     server.kill('SIGKILL');
     await sleep(200);
@@ -104,7 +112,7 @@ for (const cell of CELLS.filter((c) => only === undefined || new RegExp(only).te
       const st = r.stats ?? {};
       process.stderr.write(`${cell.name} r${round} ${t.padEnd(14)} cpu ${fmt(r.cpu)} main ${fmt(r.mainCpu)} loop ${fmt(r.loopCpu)} other ${fmt(r.cpu - r.mainCpu - r.loopCpu)}` +
         ` | ${Math.round(r.messagesPerSecond)} msg/s, µs/msg ${fmt(r.cpu / r.messagesPerSecond * 1e6, 1)}` +
-        ` | p50 ${fmt(r.p50)} p99 ${fmt(r.p99)} ms | client ${fmt(r.clientCpu)}` +
+        ` | p50 ${fmt(r.p50)} p99 ${fmt(r.p99)} ms | client ${fmt(r.clientCpu)} | ${fmt(r.kbPerConn, 1)} KB/conn` +
         (st.delivers ? ` | ev/deliver ${fmt(st.events / st.delivers, 1)} cmd/submit ${fmt(st.commands / st.submits, 1)} notify/msg ${fmt(st.notifies / (r.messagesPerSecond * r.seconds), 2)} wake/msg ${fmt(st.wakes / (r.messagesPerSecond * r.seconds), 2)}` : '') +
         '\n');
     }

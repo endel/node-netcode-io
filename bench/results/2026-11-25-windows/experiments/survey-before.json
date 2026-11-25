@@ -1,0 +1,1654 @@
+[
+  {
+    "cell": {
+      "name": "echo 500 @20/s",
+      "c": 500,
+      "rate": 20
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.007850399999999,
+          "cpu": 0.36298361568476806,
+          "mainCpu": 0.3200609242150678,
+          "loopCpu": 0,
+          "elu": 0.3517682891093799,
+          "messagesPerSecond": 9999.687306845794,
+          "stats": {},
+          "clientCpu": 0.4804599575827762,
+          "max": 2.013,
+          "p50": 0.187,
+          "p90": 0.53,
+          "p99": 1.054,
+          "p999": 1.471,
+          "received": 82015,
+          "receivedPerSecond": 10251.687394120687,
+          "sent": 81996,
+          "sentPerSecond": 10249.312437582392,
+          "processCpu": 0.32205896353907915
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.001149999999997,
+          "cpu": 0.24694867527151065,
+          "mainCpu": 0.23034188835354924,
+          "loopCpu": 0,
+          "elu": 0.2250945523046149,
+          "messagesPerSecond": 9999.937508983086,
+          "stats": {
+            "events": 80011,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 80011,
+            "delivers": 16341,
+            "eventBytes": 5920814,
+            "submits": 16341,
+            "commandBytes": 2560352
+          },
+          "clientCpu": 0.333978238149874,
+          "max": 1.372,
+          "p50": 0.149,
+          "p90": 0.248,
+          "p99": 0.604,
+          "p999": 0.839,
+          "received": 82005,
+          "receivedPerSecond": 10250.436648226589,
+          "sent": 82000,
+          "sentPerSecond": 10249.811659710753,
+          "processCpu": 0.24021546902632754
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.014800900000001,
+          "cpu": 0.2592308649023929,
+          "mainCpu": 0.22994956743092643,
+          "loopCpu": 0,
+          "elu": 0.23702573212998063,
+          "messagesPerSecond": 9999.998877077533,
+          "stats": {
+            "events": 80148,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 80148,
+            "delivers": 18905,
+            "eventBytes": 5930952,
+            "submits": 18905,
+            "commandBytes": 2564736
+          },
+          "clientCpu": 0.37889557935324647,
+          "max": 5.314,
+          "p50": 0.155,
+          "p90": 0.253,
+          "p99": 0.586,
+          "p999": 0.826,
+          "received": 82004,
+          "receivedPerSecond": 10250.211328423462,
+          "sent": 82001,
+          "sentPerSecond": 10249.836338984103,
+          "processCpu": 0.24953832602379428
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0106836,
+          "cpu": 0.2829606204743287,
+          "mainCpu": 0.05080714959207726,
+          "loopCpu": 0,
+          "elu": 0.041837365205604715,
+          "messagesPerSecond": 9999.895639368406,
+          "stats": {
+            "events": 80110,
+            "notifies": 20256,
+            "wakes": 11256,
+            "commands": 80106,
+            "delivers": 20256,
+            "eventBytes": 5927844,
+            "submits": 20256,
+            "commandBytes": 5927844
+          },
+          "clientCpu": 0.4101381987925256,
+          "max": 1.364,
+          "p50": 0.162,
+          "p90": 0.287,
+          "p99": 0.597,
+          "p999": 0.773,
+          "received": 81993,
+          "receivedPerSecond": 10248.673930238645,
+          "sent": 81992,
+          "sentPerSecond": 10248.548935739966,
+          "processCpu": 0.2828722382694031
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "echo 2000 @20/s",
+      "c": 2000,
+      "rate": 20
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.005019099999998,
+          "cpu": 0.8517881254745188,
+          "mainCpu": 0.8667062393392667,
+          "loopCpu": 0,
+          "elu": 0.8411800447614484,
+          "messagesPerSecond": 40008.773995305026,
+          "stats": {},
+          "clientCpu": 1.1874225206805256,
+          "max": 8.511,
+          "p50": 0.658,
+          "p90": 2.491,
+          "p99": 5.522,
+          "p999": 7.17,
+          "received": 328100,
+          "receivedPerSecond": 41009.824108976885,
+          "sent": 328010,
+          "sentPerSecond": 40998.5748429915,
+          "processCpu": 0.8687049853510033
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.013558,
+          "cpu": 0.8290738849051691,
+          "mainCpu": 0.7837966606094322,
+          "loopCpu": 0,
+          "elu": 0.8031621034656045,
+          "messagesPerSecond": 40003.07978054193,
+          "stats": {
+            "events": 320567,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 320567,
+            "delivers": 44805,
+            "eventBytes": 23721958,
+            "submits": 44805,
+            "commandBytes": 10258144
+          },
+          "clientCpu": 1.290941379733898,
+          "max": 34.035,
+          "p50": 0.595,
+          "p90": 1.482,
+          "p99": 9.023,
+          "p999": 16.573,
+          "received": 328043,
+          "receivedPerSecond": 41003.016813995484,
+          "sent": 328015,
+          "sentPerSecond": 40999.51701527766,
+          "processCpu": 0.7995200134571935
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0119628,
+          "cpu": 0.8472375116192371,
+          "mainCpu": 0.7938129717726599,
+          "loopCpu": 0,
+          "elu": 0.8298120665535272,
+          "messagesPerSecond": 40001.43385588361,
+          "stats": {
+            "events": 320490,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 320490,
+            "delivers": 45013,
+            "eventBytes": 23716260,
+            "submits": 45013,
+            "commandBytes": 10255680
+          },
+          "clientCpu": 1.195230552005278,
+          "max": 27.037,
+          "p50": 0.646,
+          "p90": 2.255,
+          "p99": 10.562,
+          "p999": 17.817,
+          "received": 328066,
+          "receivedPerSecond": 41005.43856461841,
+          "sent": 328024,
+          "sentPerSecond": 41000.188924546856,
+          "processCpu": 0.8114116555808273
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.009750100000002,
+          "cpu": 0.8417055380841169,
+          "mainCpu": 0.064421485509267,
+          "loopCpu": 0,
+          "elu": 0.04480036605228988,
+          "messagesPerSecond": 40001.49767469024,
+          "stats": {
+            "events": 320405,
+            "notifies": 21023,
+            "wakes": 6088,
+            "commands": 320402,
+            "delivers": 21023,
+            "eventBytes": 23709748,
+            "submits": 21023,
+            "commandBytes": 23709748
+          },
+          "clientCpu": 1.2459956122705884,
+          "max": 29.349,
+          "p50": 0.602,
+          "p90": 1.81,
+          "p99": 5.95,
+          "p999": 18.13,
+          "received": 328013,
+          "receivedPerSecond": 40998.39586384577,
+          "sent": 327988,
+          "sentPerSecond": 40995.2711099592,
+          "processCpu": 0.8467180517904046
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "closed 500x1",
+      "c": 500,
+      "rate": 0,
+      "inflight": 1
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.007466100000002,
+          "cpu": 1.0034946162519651,
+          "mainCpu": 0.9913248337073819,
+          "loopCpu": 0,
+          "elu": 0.9978273775258715,
+          "messagesPerSecond": 58001.619263801804,
+          "stats": {},
+          "clientCpu": 1.062445297347753,
+          "max": 33.61,
+          "p50": 8.416,
+          "p90": 9.143,
+          "p99": 13.231,
+          "p999": 27.438,
+          "received": 476104,
+          "receivedPerSecond": 59509.93598217112,
+          "sent": 475604,
+          "sentPerSecond": 59447.43919997419,
+          "processCpu": 0.9913248337073819
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0024064,
+          "cpu": 0.9961150961278412,
+          "mainCpu": 0.9899522223715106,
+          "loopCpu": 0,
+          "elu": 0.9904838452314193,
+          "messagesPerSecond": 56031.14583133393,
+          "stats": {
+            "events": 448384,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 448384,
+            "delivers": 50896,
+            "eventBytes": 33180416,
+            "submits": 50896,
+            "commandBytes": 14348288
+          },
+          "clientCpu": 1.3612527286144938,
+          "max": 52.34,
+          "p50": 8.747,
+          "p90": 9.788,
+          "p99": 12.513,
+          "p999": 41.128,
+          "received": 459886,
+          "receivedPerSecond": 57482.56618436546,
+          "sent": 459386,
+          "sentPerSecond": 57420.06964589249,
+          "processCpu": 0.9939510195333243
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.009182300000003,
+          "cpu": 1.0011872189362674,
+          "mainCpu": 0.9949829709831923,
+          "loopCpu": 0,
+          "elu": 0.9948964828170223,
+          "messagesPerSecond": 56015.705872995284,
+          "stats": {
+            "events": 448640,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 448640,
+            "delivers": 50646,
+            "eventBytes": 33199360,
+            "submits": 50646,
+            "commandBytes": 14356480
+          },
+          "clientCpu": 1.3183332390435358,
+          "max": 42.965,
+          "p50": 8.796,
+          "p90": 9.652,
+          "p99": 12.012,
+          "p999": 42.209,
+          "received": 459727,
+          "receivedPerSecond": 57464.73576161352,
+          "sent": 459227,
+          "sentPerSecond": 57402.237000651454,
+          "processCpu": 0.9969806780400039
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0093219,
+          "cpu": 1.0677268348081295,
+          "mainCpu": 0.0389546086292274,
+          "loopCpu": 0,
+          "elu": 0.03079925653705405,
+          "messagesPerSecond": 62030.719479510495,
+          "stats": {
+            "events": 496922,
+            "notifies": 15194,
+            "wakes": 4,
+            "commands": 496917,
+            "delivers": 15193,
+            "eventBytes": 36764976,
+            "submits": 15193,
+            "commandBytes": 36764976
+          },
+          "clientCpu": 1.4842826219603158,
+          "max": 30.511,
+          "p50": 7.989,
+          "p90": 9.148,
+          "p99": 11.113,
+          "p999": 13.933,
+          "received": 509217,
+          "receivedPerSecond": 63648.16369741189,
+          "sent": 508717,
+          "sentPerSecond": 63585.66758701356,
+          "processCpu": 1.0300497474074553
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "echo 2000 @20/s tls",
+      "c": 2000,
+      "rate": 20,
+      "tls": true
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0321842,
+          "cpu": 0.9459196302665052,
+          "mainCpu": 0.9415869720716813,
+          "loopCpu": 0,
+          "elu": 0.9456652077765028,
+          "messagesPerSecond": 39882.67599739558,
+          "stats": {},
+          "clientCpu": 1.2772923070523337,
+          "max": 92.604,
+          "p50": 0.896,
+          "p90": 5.693,
+          "p99": 30.5,
+          "p999": 42.092,
+          "received": 328124,
+          "receivedPerSecond": 41013.84816726507,
+          "sent": 328016,
+          "sentPerSecond": 41000.348710955666,
+          "processCpu": 0.9415869720716813
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.001061,
+          "cpu": 0.8605844028640057,
+          "mainCpu": 0.8280151844861575,
+          "loopCpu": 0,
+          "elu": 0.8298737130786924,
+          "messagesPerSecond": 40008.693846978545,
+          "stats": {
+            "events": 320112,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 320112,
+            "delivers": 53546,
+            "eventBytes": 23688288,
+            "submits": 53546,
+            "commandBytes": 10243584
+          },
+          "clientCpu": 1.2108615638441775,
+          "max": 22.161,
+          "p50": 0.397,
+          "p90": 1.147,
+          "p99": 4.394,
+          "p999": 11.576,
+          "received": 328095,
+          "receivedPerSecond": 41009.30320407282,
+          "sent": 328018,
+          "sentPerSecond": 40999.67880764278,
+          "processCpu": 0.8456378472805044
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.003260000000001,
+          "cpu": 0.875205688964622,
+          "mainCpu": 0.8648975542466444,
+          "loopCpu": 0,
+          "elu": 0.8489590719688825,
+          "messagesPerSecond": 39998.32568228446,
+          "stats": {
+            "events": 320117,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 320117,
+            "delivers": 52328,
+            "eventBytes": 23688658,
+            "submits": 52328,
+            "commandBytes": 10243744
+          },
+          "clientCpu": 1.2773396146129976,
+          "max": 22.462,
+          "p50": 0.474,
+          "p90": 1.895,
+          "p99": 6.087,
+          "p999": 13.046,
+          "received": 328014,
+          "receivedPerSecond": 41001.61725726412,
+          "sent": 328001,
+          "sentPerSecond": 40999.99226252505,
+          "processCpu": 0.8706452120760789
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0111934,
+          "cpu": 0.8991592738380281,
+          "mainCpu": 0.06428505395962604,
+          "loopCpu": 0,
+          "elu": 0.05475475580432079,
+          "messagesPerSecond": 40007.14799869892,
+          "stats": {
+            "events": 320422,
+            "notifies": 27731,
+            "wakes": 8906,
+            "commands": 320484,
+            "delivers": 27732,
+            "eventBytes": 23717370,
+            "submits": 27732,
+            "commandBytes": 23717370
+          },
+          "clientCpu": 1.2909944849653088,
+          "max": 10.191,
+          "p50": 0.515,
+          "p90": 2.245,
+          "p99": 5.556,
+          "p999": 8.487,
+          "received": 328062,
+          "receivedPerSecond": 41007.07850908941,
+          "sent": 328037,
+          "sentPerSecond": 41003.95356026045,
+          "processCpu": 0.885511015125412
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "broadcast 32x32 @4/s",
+      "c": 1024,
+      "rate": 4,
+      "spread": true,
+      "mode": "broadcast:32"
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 0.015585999999999331,
+          "cpu": 1.001370434442327,
+          "mainCpu": 1.0265622994995949,
+          "loopCpu": 0,
+          "elu": 1,
+          "messagesPerSecond": 0,
+          "stats": {},
+          "clientCpu": 0.775362750709112,
+          "max": 13769.212,
+          "p50": 5528.537,
+          "p90": 10258.024,
+          "p99": 12731.29,
+          "p999": 13528.532,
+          "received": 740080,
+          "receivedPerSecond": 92506.67438505586,
+          "sent": 33608,
+          "sentPerSecond": 4200.848979479188,
+          "processCpu": 1.0265622994995949
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 7.9871196000000015,
+          "cpu": 1.007292750829464,
+          "mainCpu": 0.9976061958556371,
+          "loopCpu": 0,
+          "elu": 0.9996777044685445,
+          "messagesPerSecond": 4092.589273359572,
+          "stats": {
+            "events": 32688,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 1046016,
+            "delivers": 2288,
+            "eventBytes": 2418912,
+            "submits": 2289,
+            "commandBytes": 33472512
+          },
+          "clientCpu": 0.7538547428746931,
+          "max": 1261.391,
+          "p50": 608.128,
+          "p90": 776.784,
+          "p99": 947.238,
+          "p999": 1175.253,
+          "received": 1132244,
+          "receivedPerSecond": 141520.83058925,
+          "sent": 33590,
+          "sentPerSecond": 4198.463140005959,
+          "processCpu": 0.9976061958556371
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0049122,
+          "cpu": 1.0166351942626466,
+          "mainCpu": 0.9993863517953389,
+          "loopCpu": 0,
+          "elu": 0.9998930528032951,
+          "messagesPerSecond": 4105.229286587303,
+          "stats": {
+            "events": 32862,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 1051584,
+            "delivers": 2222,
+            "eventBytes": 2431788,
+            "submits": 2223,
+            "commandBytes": 33650688
+          },
+          "clientCpu": 0.7929507698412938,
+          "max": 879.089,
+          "p50": 638.781,
+          "p90": 808.45,
+          "p99": 859.706,
+          "p999": 870.102,
+          "received": 1137768,
+          "receivedPerSecond": 142217.77521194707,
+          "sent": 33567,
+          "sentPerSecond": 4195.7798606916585,
+          "processCpu": 1.0110042181349597
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.012650599999999,
+          "cpu": 1.0236529140264232,
+          "mainCpu": 0.009734606423497364,
+          "loopCpu": 0,
+          "elu": 0.01059530216982734,
+          "messagesPerSecond": 4265.380047895762,
+          "stats": {
+            "events": 34177,
+            "notifies": 891,
+            "wakes": 3,
+            "commands": 1092512,
+            "delivers": 891,
+            "eventBytes": 2529098,
+            "submits": 894,
+            "commandBytes": 80931136
+          },
+          "clientCpu": 0.7812321097846859,
+          "max": 594.744,
+          "p50": 350.357,
+          "p90": 498.092,
+          "p99": 577.424,
+          "p999": 585.639,
+          "received": 1134807,
+          "receivedPerSecond": 141847.6266893488,
+          "sent": 33576,
+          "sentPerSecond": 4196.903890900898,
+          "processCpu": 1.0041620933776896
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "broadcast 32x32 @2/s x3",
+      "c": 1024,
+      "rate": 2,
+      "spread": true,
+      "mode": "broadcast:32:3"
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 0.016840299999999843,
+          "cpu": 1.0099420040021159,
+          "mainCpu": 0.890720474100826,
+          "loopCpu": 0,
+          "elu": 1,
+          "messagesPerSecond": 0,
+          "stats": {},
+          "clientCpu": 0.7050372416529497,
+          "max": 18644.88,
+          "p50": 7601.504,
+          "p90": 14025.959,
+          "p99": 17404.817,
+          "p999": 18328.308,
+          "received": 779070,
+          "receivedPerSecond": 97378.10328723563,
+          "sent": 16794,
+          "sentPerSecond": 2099.128276799049,
+          "processCpu": 0.890720474100826
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0086904,
+          "cpu": 0.9395262464791095,
+          "mainCpu": 0.9306140739314882,
+          "loopCpu": 0,
+          "elu": 0.930148925543465,
+          "messagesPerSecond": 2047.77550147275,
+          "stats": {
+            "events": 16400,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 1574400,
+            "delivers": 4731,
+            "eventBytes": 1213600,
+            "submits": 4731,
+            "commandBytes": 50380800
+          },
+          "clientCpu": 0.601528273041264,
+          "max": 31.579,
+          "p50": 2.479,
+          "p90": 7.463,
+          "p99": 14.426,
+          "p999": 22.685,
+          "received": 1610310,
+          "receivedPerSecond": 201277.29732178242,
+          "sent": 16773,
+          "sentPerSecond": 2096.505708825168,
+          "processCpu": 0.9363578344843995
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.004663300000002,
+          "cpu": 0.9363729839576626,
+          "mainCpu": 0.9329561681876111,
+          "loopCpu": 0,
+          "elu": 0.9292278048698303,
+          "messagesPerSecond": 2048.930652710901,
+          "stats": {
+            "events": 16401,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 1574496,
+            "delivers": 4510,
+            "eventBytes": 1213674,
+            "submits": 4510,
+            "commandBytes": 50383872
+          },
+          "clientCpu": 0.6640252979826806,
+          "max": 18.234,
+          "p50": 2.571,
+          "p90": 6.765,
+          "p99": 12.508,
+          "p999": 15.513,
+          "received": 1612749,
+          "receivedPerSecond": 201582.33134988614,
+          "sent": 16791,
+          "sentPerSecond": 2098.757417115706,
+          "processCpu": 0.9389526727501453
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.007601000000001,
+          "cpu": 0.9216887995855968,
+          "mainCpu": 0.019481490149172016,
+          "loopCpu": 0,
+          "elu": 0.0194631809600896,
+          "messagesPerSecond": 2047.679448563933,
+          "stats": {
+            "events": 16397,
+            "notifies": 4683,
+            "wakes": 4196,
+            "commands": 1574112,
+            "delivers": 4683,
+            "eventBytes": 1213378,
+            "submits": 4683,
+            "commandBytes": 116484288
+          },
+          "clientCpu": 0.6816211817557903,
+          "max": 15.684,
+          "p50": 2.161,
+          "p90": 5.103,
+          "p99": 9.434,
+          "p999": 13.188,
+          "received": 1613547,
+          "receivedPerSecond": 201687.62186058643,
+          "sent": 16807,
+          "sentPerSecond": 2100.815074250007,
+          "processCpu": 0.8683000064563655
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "size 1KiB 500 @20/s",
+      "c": 500,
+      "rate": 20,
+      "spread": true,
+      "size": 1024
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0133443,
+          "cpu": 0.2851260967252998,
+          "mainCpu": 0.300249173119892,
+          "loopCpu": 0,
+          "elu": 0.27277258038125635,
+          "messagesPerSecond": 10000.443884583869,
+          "stats": {},
+          "clientCpu": 0.4550578180448698,
+          "max": 6.295,
+          "p50": 0.133,
+          "p90": 0.299,
+          "p99": 0.732,
+          "p999": 1.697,
+          "received": 82006,
+          "receivedPerSecond": 10250.292580693587,
+          "sent": 82000,
+          "sentPerSecond": 10249.542614160844,
+          "processCpu": 0.300373964962419
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0003405,
+          "cpu": 0.2645923821999227,
+          "mainCpu": 0.28711277976231137,
+          "loopCpu": 0,
+          "elu": 0.23975854342271413,
+          "messagesPerSecond": 10000.199366514462,
+          "stats": {
+            "events": 80005,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 80005,
+            "delivers": 17911,
+            "eventBytes": 83845240,
+            "submits": 17911,
+            "commandBytes": 2560160
+          },
+          "clientCpu": 0.3593735130920896,
+          "max": 2.739,
+          "p50": 0.15,
+          "p90": 0.291,
+          "p99": 0.794,
+          "p999": 1.386,
+          "received": 82016,
+          "receivedPerSecond": 10251.957582525503,
+          "sent": 81994,
+          "sentPerSecond": 10249.20759390358,
+          "processCpu": 0.3027371147515534
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0132953,
+          "cpu": 0.27286092876468176,
+          "mainCpu": 0.22425231227906953,
+          "loopCpu": 0,
+          "elu": 0.24661269504680972,
+          "messagesPerSecond": 9999.881072646856,
+          "stats": {
+            "events": 80132,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 80132,
+            "delivers": 21176,
+            "eventBytes": 83978336,
+            "submits": 21176,
+            "commandBytes": 2564224
+          },
+          "clientCpu": 0.4218685981440232,
+          "max": 28.281,
+          "p50": 0.148,
+          "p90": 0.256,
+          "p99": 0.597,
+          "p999": 4.576,
+          "received": 82008,
+          "receivedPerSecond": 10250.844443435572,
+          "sent": 82000,
+          "sentPerSecond": 10249.844458610341,
+          "processCpu": 0.2418480696699147
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.006937,
+          "cpu": 0.30346551760430596,
+          "mainCpu": 0.04883265598318058,
+          "loopCpu": 0,
+          "elu": 0.050514050680228906,
+          "messagesPerSecond": 10001.202707102602,
+          "stats": {
+            "events": 80079,
+            "notifies": 21636,
+            "wakes": 12312,
+            "commands": 80079,
+            "delivers": 21636,
+            "eventBytes": 83922792,
+            "submits": 21636,
+            "commandBytes": 83922792
+          },
+          "clientCpu": 0.47263881553569187,
+          "max": 1.866,
+          "p50": 0.165,
+          "p90": 0.302,
+          "p99": 0.642,
+          "p999": 1.221,
+          "received": 82005,
+          "receivedPerSecond": 10250.246894017697,
+          "sent": 82000,
+          "sentPerSecond": 10249.621917071534,
+          "processCpu": 0.2810063323840315
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "size 16KiB 200 @20/s",
+      "c": 200,
+      "rate": 20,
+      "spread": true,
+      "size": 16384
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0134496,
+          "cpu": 0.2125559814266695,
+          "mainCpu": 0.2651791807613041,
+          "loopCpu": 0,
+          "elu": 0.20244580131234366,
+          "messagesPerSecond": 3998.4028850696213,
+          "stats": {},
+          "clientCpu": 0.43163308760720764,
+          "max": 1.122,
+          "p50": 0.146,
+          "p90": 0.324,
+          "p99": 0.651,
+          "p999": 0.889,
+          "received": 32802,
+          "receivedPerSecond": 4100.178400634679,
+          "sent": 32800,
+          "sentPerSecond": 4099.928405000228,
+          "processCpu": 0.2651791807613041
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0113738,
+          "cpu": 0.20286805996170948,
+          "mainCpu": 0.17737282462091586,
+          "loopCpu": 0,
+          "elu": 0.16845879648363893,
+          "messagesPerSecond": 3999.9381878798367,
+          "stats": {
+            "events": 32045,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 32045,
+            "delivers": 17101,
+            "eventBytes": 525794360,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.2910029554588267,
+          "max": 7.935,
+          "p50": 0.165,
+          "p90": 0.286,
+          "p99": 0.491,
+          "p999": 0.723,
+          "received": 32800,
+          "receivedPerSecond": 4099.821504021268,
+          "sent": 32800,
+          "sentPerSecond": 4099.821504021268,
+          "processCpu": 0.20658129820381121
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0079301,
+          "cpu": 0.2001494800225758,
+          "mainCpu": 0.20292384919793444,
+          "loopCpu": 0,
+          "elu": 0.17000017645096185,
+          "messagesPerSecond": 4000.159791604575,
+          "stats": {
+            "events": 32033,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 32033,
+            "delivers": 16399,
+            "eventBytes": 525597464,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.3437270175522889,
+          "max": 1.014,
+          "p50": 0.177,
+          "p90": 0.292,
+          "p99": 0.539,
+          "p999": 0.754,
+          "received": 32804,
+          "receivedPerSecond": 4100.225848649195,
+          "sent": 32802,
+          "sentPerSecond": 4099.975865363702,
+          "processCpu": 0.21666023283594849
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.005064599999999,
+          "cpu": 0.2342418805207039,
+          "mainCpu": 0.10930580122988641,
+          "loopCpu": 0,
+          "elu": 0.07320522202958495,
+          "messagesPerSecond": 4000.9670877609165,
+          "stats": {
+            "events": 32023,
+            "notifies": 14578,
+            "wakes": 11085,
+            "commands": 32028,
+            "delivers": 14579,
+            "eventBytes": 525515424,
+            "submits": 14579,
+            "commandBytes": 525515424
+          },
+          "clientCpu": 0.4238053454626814,
+          "max": 5.882,
+          "p50": 0.183,
+          "p90": 0.303,
+          "p99": 0.534,
+          "p999": 0.734,
+          "received": 32805,
+          "receivedPerSecond": 4100.404603252576,
+          "sent": 32802,
+          "sentPerSecond": 4100.029623407742,
+          "processCpu": 0.29481336103146505
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "size 16KiB 200 @20/s tls",
+      "c": 200,
+      "rate": 20,
+      "spread": true,
+      "size": 16384,
+      "tls": true
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.012221299999998,
+          "cpu": 0.30825072400910897,
+          "mainCpu": 0.32575236033483,
+          "loopCpu": 0,
+          "elu": 0.29613995896201756,
+          "messagesPerSecond": 4000.763184112252,
+          "stats": {},
+          "clientCpu": 0.5488216626249226,
+          "max": 2.173,
+          "p50": 0.196,
+          "p90": 0.522,
+          "p99": 0.923,
+          "p999": 1.382,
+          "received": 32803,
+          "receivedPerSecond": 4100.326718652888,
+          "sent": 32800,
+          "sentPerSecond": 4099.951723068461,
+          "processCpu": 0.3256275510013684
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0045963,
+          "cpu": 0.2834875335316691,
+          "mainCpu": 0.22849372178831806,
+          "loopCpu": 0,
+          "elu": 0.2490727431691717,
+          "messagesPerSecond": 4000.701446992399,
+          "stats": {
+            "events": 32024,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 32024,
+            "delivers": 17366,
+            "eventBytes": 525449792,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.42575983960206604,
+          "max": 1.625,
+          "p50": 0.225,
+          "p90": 0.383,
+          "p99": 0.692,
+          "p999": 1.011,
+          "received": 32807,
+          "receivedPerSecond": 4100.668787618343,
+          "sent": 32805,
+          "sentPerSecond": 4100.418800189585,
+          "processCpu": 0.24985644810094923
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.010888900000001,
+          "cpu": 0.28368725214205787,
+          "mainCpu": 0.28473744031077497,
+          "loopCpu": 0,
+          "elu": 0.25207981211675023,
+          "messagesPerSecond": 3998.1830231099566,
+          "stats": {
+            "events": 32029,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 32029,
+            "delivers": 17543,
+            "eventBytes": 525531832,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.5058480945874907,
+          "max": 4.095,
+          "p50": 0.23,
+          "p90": 0.382,
+          "p99": 0.755,
+          "p999": 1.111,
+          "received": 32800,
+          "receivedPerSecond": 4099.908572038844,
+          "sent": 32800,
+          "sentPerSecond": 4099.908572038844,
+          "processCpu": 0.3043357647863522
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.003556299999998,
+          "cpu": 0.33121359554774416,
+          "mainCpu": 0.060598061889063005,
+          "loopCpu": 0,
+          "elu": 0.07272820936132567,
+          "messagesPerSecond": 3999.721973593165,
+          "stats": {
+            "events": 32007,
+            "notifies": 16950,
+            "wakes": 11429,
+            "commands": 32012,
+            "delivers": 16951,
+            "eventBytes": 525252896,
+            "submits": 16951,
+            "commandBytes": 525252896
+          },
+          "clientCpu": 0.47265505063780905,
+          "max": 4.457,
+          "p50": 0.242,
+          "p90": 0.45,
+          "p99": 0.849,
+          "p999": 1.228,
+          "received": 32803,
+          "receivedPerSecond": 4100.36459532484,
+          "sent": 32800,
+          "sentPerSecond": 4099.989596276399,
+          "processCpu": 0.28312414070230263
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "size 64KiB 50 @20/s",
+      "c": 50,
+      "rate": 20,
+      "spread": true,
+      "size": 65536
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0110248,
+          "cpu": 0.09681883468036298,
+          "mainCpu": 0.08188715131677037,
+          "loopCpu": 0,
+          "elu": 0.09133005182928802,
+          "messagesPerSecond": 1000.2465602153673,
+          "stats": {},
+          "clientCpu": 0.15233049343880847,
+          "max": 6.025,
+          "p50": 0.201,
+          "p90": 0.454,
+          "p99": 0.644,
+          "p999": 0.795,
+          "received": 8200,
+          "receivedPerSecond": 1024.910807137009,
+          "sent": 8200,
+          "sentPerSecond": 1024.910807137009,
+          "processCpu": 0.08201197929133862
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0043344,
+          "cpu": 0.14863993416093993,
+          "mainCpu": 0.14454668460628034,
+          "loopCpu": 0,
+          "elu": 0.11569427657691304,
+          "messagesPerSecond": 999.9582226349764,
+          "stats": {
+            "events": 8004,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 8004,
+            "delivers": 7219,
+            "eventBytes": 524742240,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.25976159869522025,
+          "max": 15.752,
+          "p50": 0.285,
+          "p90": 0.539,
+          "p99": 0.868,
+          "p999": 1.244,
+          "received": 8202,
+          "receivedPerSecond": 1025.2341088713126,
+          "sent": 8200,
+          "sentPerSecond": 1024.9841127462525,
+          "processCpu": 0.1816515811733203
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.000847300000002,
+          "cpu": 0.1552693211629077,
+          "mainCpu": 0.14648448546193346,
+          "loopCpu": 0,
+          "elu": 0.12219718242604669,
+          "messagesPerSecond": 1000.019085478609,
+          "stats": {
+            "events": 8001,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 8001,
+            "delivers": 6973,
+            "eventBytes": 524545560,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.27146812423941274,
+          "max": 15.707,
+          "p50": 0.294,
+          "p90": 0.6,
+          "p99": 0.911,
+          "p999": 2.926,
+          "received": 8201,
+          "receivedPerSecond": 1025.0636371280225,
+          "sent": 8200,
+          "sentPerSecond": 1024.9386446103872,
+          "processCpu": 0.1718567982168588
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0141682,
+          "cpu": 0.16405482857822654,
+          "mainCpu": 0.03319121752398459,
+          "loopCpu": 0,
+          "elu": 0.060479201917278014,
+          "messagesPerSecond": 1000.1037911832198,
+          "stats": {
+            "events": 8015,
+            "notifies": 6573,
+            "wakes": 5800,
+            "commands": 8015,
+            "delivers": 6573,
+            "eventBytes": 525463400,
+            "submits": 6573,
+            "commandBytes": 525463400
+          },
+          "clientCpu": 0.12694848185927599,
+          "max": 2.81,
+          "p50": 0.306,
+          "p90": 0.665,
+          "p99": 0.944,
+          "p999": 1.286,
+          "received": 8201,
+          "receivedPerSecond": 1025.087507424416,
+          "sent": 8200,
+          "sentPerSecond": 1024.9625119961238,
+          "processCpu": 0.0974524093467367
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "size 64KiB 50 @20/s tls",
+      "c": 50,
+      "rate": 20,
+      "spread": true,
+      "size": 65536,
+      "tls": true
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.003132200000001,
+          "cpu": 0.21003667426406375,
+          "mainCpu": 0.21479090399131479,
+          "loopCpu": 0,
+          "elu": 0.2041124436216385,
+          "messagesPerSecond": 999.8585303888893,
+          "stats": {},
+          "clientCpu": 0.5038902892750872,
+          "max": 2.22,
+          "p50": 0.394,
+          "p90": 0.862,
+          "p99": 1.519,
+          "p999": 1.917,
+          "received": 8201,
+          "receivedPerSecond": 1025.092530194106,
+          "sent": 8200,
+          "sentPerSecond": 1024.9675341533557,
+          "processCpu": 0.21466595291278578
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.004783500000002,
+          "cpu": 0.21206714657149264,
+          "mainCpu": 0.20687630090182946,
+          "loopCpu": 0,
+          "elu": 0.17709126885443413,
+          "messagesPerSecond": 1000.4018222354168,
+          "stats": {
+            "events": 8008,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 8008,
+            "delivers": 6978,
+            "eventBytes": 525004480,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.34960190225933924,
+          "max": 17.571,
+          "p50": 0.403,
+          "p90": 0.791,
+          "p99": 1.485,
+          "p999": 2.504,
+          "received": 8201,
+          "receivedPerSecond": 1025.103088421485,
+          "sent": 8200,
+          "sentPerSecond": 1024.978091093303,
+          "processCpu": 0.24997553025637725
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0100686,
+          "cpu": 0.19686675441350673,
+          "mainCpu": 0.1793992126359567,
+          "loopCpu": 0,
+          "elu": 0.16700353309948385,
+          "messagesPerSecond": 999.8665929028373,
+          "stats": {
+            "events": 8009,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 8009,
+            "delivers": 6666,
+            "eventBytes": 525070040,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 0.2714699260131879,
+          "max": 14.18,
+          "p50": 0.396,
+          "p90": 0.704,
+          "p99": 1.26,
+          "p999": 1.704,
+          "received": 8202,
+          "receivedPerSecond": 1025.1954339730266,
+          "sent": 8200,
+          "sentPerSecond": 1024.9454472785685,
+          "processCpu": 0.20486715931496516
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0140911,
+          "cpu": 0.3403637014761051,
+          "mainCpu": 0.10132153351738166,
+          "loopCpu": 0,
+          "elu": 0.0874429306733347,
+          "messagesPerSecond": 999.8638523088414,
+          "stats": {
+            "events": 8015,
+            "notifies": 6573,
+            "wakes": 5931,
+            "commands": 8013,
+            "delivers": 6572,
+            "eventBytes": 525332280,
+            "submits": 6572,
+            "commandBytes": 525332280
+          },
+          "clientCpu": 0.6640063499630312,
+          "max": 18.1,
+          "p50": 0.636,
+          "p90": 1.269,
+          "p99": 1.883,
+          "p999": 4.006,
+          "received": 8203,
+          "receivedPerSecond": 1025.2882990582107,
+          "sent": 8200,
+          "sentPerSecond": 1024.913330766467,
+          "processCpu": 0.3938063544099218
+        }
+      }
+    ]
+  },
+  {
+    "cell": {
+      "name": "size 16KiB closed 50x1",
+      "c": 50,
+      "rate": 0,
+      "inflight": 1,
+      "size": 16384
+    },
+    "runs": [
+      {
+        "round": 0,
+        "transport": "uws",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0145566,
+          "cpu": 1.030427530340783,
+          "mainCpu": 0.9963121353463271,
+          "loopCpu": 0,
+          "elu": 0.9999865618757496,
+          "messagesPerSecond": 35210.182432300746,
+          "stats": {},
+          "clientCpu": 1.6679406243512218,
+          "max": 4.877,
+          "p50": 1.418,
+          "p90": 1.58,
+          "p99": 2.32,
+          "p999": 3.791,
+          "received": 288713,
+          "receivedPerSecond": 36088.51645739123,
+          "sent": 288663,
+          "sentPerSecond": 36082.26656278008,
+          "processCpu": 1.0001800972994563
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode-base",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0150896,
+          "cpu": 1.0302171215663758,
+          "mainCpu": 0.9843932374754738,
+          "loopCpu": 0,
+          "elu": 0.9800724729898728,
+          "messagesPerSecond": 45182.027659428786,
+          "stats": {
+            "events": 362138,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 362138,
+            "delivers": 57337,
+            "eventBytes": 5941960304,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 2.0955719683894283,
+          "max": 5.301,
+          "p50": 1.052,
+          "p90": 1.259,
+          "p99": 1.975,
+          "p999": 2.894,
+          "received": 370789,
+          "receivedPerSecond": 46345.72433697806,
+          "sent": 370739,
+          "sentPerSecond": 46339.47472812545,
+          "processCpu": 0.9979925863835634
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode",
+        "r": {
+          "type": "metrics",
+          "seconds": 8.0071245,
+          "cpu": 1.0286092589473896,
+          "mainCpu": 0.9815009120939734,
+          "loopCpu": 0,
+          "elu": 0.9798379466958742,
+          "messagesPerSecond": 44050.64514733098,
+          "stats": {
+            "events": 352719,
+            "notifies": 0,
+            "wakes": 0,
+            "commands": 352719,
+            "delivers": 58006,
+            "eventBytes": 5787413352,
+            "submits": 0,
+            "commandBytes": 0
+          },
+          "clientCpu": 2.0136095286149707,
+          "max": 3.295,
+          "p50": 1.097,
+          "p90": 1.276,
+          "p99": 2.126,
+          "p999": 2.842,
+          "received": 361141,
+          "receivedPerSecond": 45141.227314749274,
+          "sent": 361091,
+          "sentPerSecond": 45134.977508258904,
+          "processCpu": 0.99324045729525
+        }
+      },
+      {
+        "round": 0,
+        "transport": "netcode@quic",
+        "r": {
+          "type": "metrics",
+          "seconds": 7.999965400000001,
+          "cpu": 1.2348848011800542,
+          "mainCpu": 0.2303759963761843,
+          "loopCpu": 0,
+          "elu": 0.2175728723836789,
+          "messagesPerSecond": 46686.32691836392,
+          "stats": {
+            "events": 373489,
+            "notifies": 20986,
+            "wakes": 3205,
+            "commands": 373489,
+            "delivers": 20986,
+            "eventBytes": 6128207512,
+            "submits": 20986,
+            "commandBytes": 6128207512
+          },
+          "clientCpu": 2.1054424319696006,
+          "max": 4.759,
+          "p50": 1.012,
+          "p90": 1.292,
+          "p99": 2.455,
+          "p999": 3.753,
+          "received": 382802,
+          "receivedPerSecond": 47849.651879351506,
+          "sent": 382752,
+          "sentPerSecond": 47843.40195747553,
+          "processCpu": 1.1992551867786827
+        }
+      }
+    ]
+  }
+]

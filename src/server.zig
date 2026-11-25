@@ -713,9 +713,27 @@ fn threadCpuNs(t: std.Thread.Handle) ?u64 {
             if (std.os.linux.errno(std.os.linux.syscall2(.clock_gettime, @as(usize, @bitCast(@as(isize, clock))), @intFromPtr(&ts))) != .SUCCESS) return null;
             return @as(u64, @intCast(ts.sec)) * std.time.ns_per_s + @as(u64, @intCast(ts.nsec));
         },
+        .windows => {
+            var times: [4]FileTime = undefined;
+            if (GetThreadTimes(t, &times[0], &times[1], &times[2], &times[3]) == 0) return null;
+            // kernel and user, in 100 ns units
+            return (times[2].ticks() + times[3].ticks()) * 100;
+        },
         else => return null,
     }
 }
+
+const FileTime = extern struct {
+    low: u32,
+    high: u32,
+
+    fn ticks(self: FileTime) u64 {
+        return @as(u64, self.high) << 32 | self.low;
+    }
+};
+extern "kernel32" fn GetThreadTimes(std.os.windows.HANDLE, created: *FileTime, exited: *FileTime, kernel: *FileTime, user: *FileTime) callconv(.winapi) i32;
+extern "kernel32" fn GetCurrentThread() callconv(.winapi) std.os.windows.HANDLE;
+extern "kernel32" fn SetThreadDescription(std.os.windows.HANDLE, [*:0]const u16) callconv(.winapi) i32;
 
 extern "c" fn pthread_mach_thread_np(std.Thread.Handle) std.c.mach_port_t;
 extern "c" fn pthread_getcpuclockid(std.Thread.Handle, *c_int) c_int;
@@ -726,6 +744,7 @@ fn nameThread(comptime name: [:0]const u8) void {
     switch (builtin.os.tag) {
         .macos => _ = pthread_setname_np(name.ptr),
         .linux => _ = std.os.linux.prctl(@intFromEnum(std.os.linux.PR.SET_NAME), @intFromPtr(name.ptr), 0, 0, 0),
+        .windows => _ = SetThreadDescription(GetCurrentThread(), std.unicode.utf8ToUtf16LeStringLiteral(name)),
         else => {},
     }
 }

@@ -23,7 +23,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -39,11 +38,8 @@ var (
 	dialPar  = flag.Int("dial", 50, "connections opened at once")
 	senders  = flag.Int("senders", 0, "paced mode: sending goroutines (default GOMAXPROCS)")
 	spread   = flag.Bool("spread", false, "paced mode: a timer per connection at a random phase, so arrivals don't come in bursts")
+	pid      = flag.Int("pid", 0, "the server's process: its CPU over the window, where the OS counts it exactly (Windows)")
 )
-
-var epoch = time.Now()
-
-func now() int64 { return int64(time.Since(epoch)) }
 
 var (
 	measuring atomic.Bool
@@ -189,12 +185,6 @@ func (k *conn) readLoop(closedLoop bool) {
 	}
 }
 
-func cpuSeconds() float64 {
-	var ru syscall.Rusage
-	syscall.Getrusage(syscall.RUSAGE_SELF, &ru)
-	return float64(ru.Utime.Sec+ru.Stime.Sec) + float64(ru.Utime.Usec+ru.Stime.Usec)/1e6
-}
-
 func main() {
 	flag.Parse()
 	if *size < 16 {
@@ -315,12 +305,14 @@ func main() {
 
 	time.Sleep(*warmup)
 	cpu0 := cpuSeconds()
+	server := serverCpu(*pid)
 	t0 := time.Now()
 	measuring.Store(true)
 	fmt.Println("measuring")
 	time.Sleep(*duration)
 	elapsed := time.Since(t0).Seconds()
 	cpu := (cpuSeconds() - cpu0) / elapsed
+	serverSeconds, serverOk := server()
 	running.Store(false)
 	close(stopSend)
 	sendWG.Wait()
@@ -353,6 +345,9 @@ func main() {
 		"sentPerSecond": float64(s) / elapsed, "receivedPerSecond": float64(r) / elapsed,
 		"p50": pct(0.5), "p90": pct(0.9), "p99": pct(0.99), "p999": pct(0.999), "max": pct(1),
 		"clientCpu": cpu,
+	}
+	if serverOk {
+		out["serverCpu"] = serverSeconds / elapsed
 	}
 	b, _ := json.Marshal(out)
 	fmt.Println(string(b))

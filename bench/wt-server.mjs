@@ -1,9 +1,10 @@
 // A WebTransport echo served by netcode-io, for bench/go/wtload in quic-zig:
 //   node wt-server.mjs <port> [host]
 // Datagrams and bidi stream bytes go straight back; any path is accepted.
+import { fileURLToPath } from 'node:url';
 import { Server } from 'netcode-io';
 
-const certs = new URL('../test/certs/', import.meta.url).pathname;
+const certs = fileURLToPath(new URL('../test/certs/', import.meta.url));
 const server = new Server({
   host: process.argv[3] ?? '127.0.0.1',
   port: Number(process.argv[2] ?? 4433),

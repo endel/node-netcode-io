@@ -1,0 +1,168 @@
+echo 500 @20/s r0 uws            cpu 0.35 main 0.35 loop 0.00 other 0.00 | 10000 msg/s, µs/msg 35.0 | p50 0.17 p99 1.00 ms | client 0.49 | 4.9 KB/conn
+echo 500 @20/s r0 netcode        cpu 0.26 main 0.22 loop 0.00 other 0.04 | 10000 msg/s, µs/msg 26.4 | p50 0.15 p99 0.70 ms | client 0.39 | 7.8 KB/conn | ev/deliver 4.4 cmd/submit 4.4 notify/msg 0.00 wake/msg 0.00
+echo 500 @20/s r0 netcode@quic   cpu 0.38 main 0.09 loop 0.31 other -0.02 | 10000 msg/s, µs/msg 38.5 | p50 0.20 p99 1.07 ms | client 0.50 | 8.2 KB/conn | ev/deliver 4.4 cmd/submit 4.4 notify/msg 0.23 wake/msg 0.13
+echo 500 @20/s r1 netcode@quic   cpu 0.29 main 0.05 loop 0.25 other -0.01 | 10000 msg/s, µs/msg 28.5 | p50 0.15 p99 0.69 ms | client 0.35 | 8.4 KB/conn | ev/deliver 4.3 cmd/submit 4.3 notify/msg 0.23 wake/msg 0.13
+echo 500 @20/s r1 netcode        cpu 0.24 main 0.22 loop 0.00 other 0.03 | 10000 msg/s, µs/msg 24.2 | p50 0.15 p99 0.61 ms | client 0.34 | 8.1 KB/conn | ev/deliver 5.0 cmd/submit 5.0 notify/msg 0.00 wake/msg 0.00
+echo 500 @20/s r1 uws            cpu 0.29 main 0.30 loop 0.00 other -0.01 | 10000 msg/s, µs/msg 28.8 | p50 0.15 p99 0.73 ms | client 0.44 | 5.2 KB/conn
+echo 500 @20/s r2 uws            cpu 0.29 main 0.31 loop 0.00 other -0.01 | 10000 msg/s, µs/msg 29.4 | p50 0.15 p99 0.75 ms | client 0.46 | 5.6 KB/conn
+echo 500 @20/s r2 netcode        cpu 0.24 main 0.20 loop 0.00 other 0.04 | 10000 msg/s, µs/msg 23.8 | p50 0.14 p99 0.61 ms | client 0.40 | 7.5 KB/conn | ev/deliver 5.1 cmd/submit 5.1 notify/msg 0.00 wake/msg 0.00
+echo 500 @20/s r2 netcode@quic   cpu 0.29 main 0.05 loop 0.22 other 0.02 | 10000 msg/s, µs/msg 28.6 | p50 0.16 p99 0.66 ms | client 0.37 | 8.4 KB/conn | ev/deliver 4.3 cmd/submit 4.3 notify/msg 0.23 wake/msg 0.13
+  uws            median: cpu 0.29 (main 0.31 loop 0.00) 29.4 µs/msg 10000 msg/s p50 0.15 p99 0.75
+  netcode        median: cpu 0.24 (main 0.22 loop 0.00) 24.2 µs/msg 10000 msg/s p50 0.15 p99 0.61
+  netcode@quic   median: cpu 0.29 (main 0.05 loop 0.25) 28.6 µs/msg 10000 msg/s p50 0.16 p99 0.69
+echo 2000 @20/s r0 uws            cpu 0.90 main 0.91 loop 0.00 other -0.00 | 40029 msg/s, µs/msg 22.6 | p50 0.84 p99 9.84 ms | client 1.20 | 2.3 KB/conn
+echo 2000 @20/s r0 netcode        cpu 0.83 main 0.81 loop 0.00 other 0.02 | 40008 msg/s, µs/msg 20.9 | p50 0.52 p99 7.19 ms | client 1.23 | 3.9 KB/conn | ev/deliver 8.2 cmd/submit 8.2 notify/msg 0.00 wake/msg 0.00
+echo 2000 @20/s r0 netcode@quic   cpu 0.85 main 0.04 loop 0.79 other 0.03 | 40002 msg/s, µs/msg 21.3 | p50 0.61 p99 6.44 ms | client 1.15 | 4.1 KB/conn | ev/deliver 15.9 cmd/submit 15.9 notify/msg 0.06 wake/msg 0.02
+echo 2000 @20/s r1 netcode@quic   cpu 0.86 main 0.05 loop 0.81 other -0.01 | 40006 msg/s, µs/msg 21.4 | p50 0.64 p99 7.87 ms | client 1.22 | 4.0 KB/conn | ev/deliver 16.6 cmd/submit 16.6 notify/msg 0.06 wake/msg 0.02
+echo 2000 @20/s r1 netcode        cpu 0.82 main 0.78 loop 0.00 other 0.04 | 40002 msg/s, µs/msg 20.5 | p50 0.59 p99 9.23 ms | client 1.17 | 3.4 KB/conn | ev/deliver 8.5 cmd/submit 8.5 notify/msg 0.00 wake/msg 0.00
+echo 2000 @20/s r1 uws            cpu 0.90 main 0.89 loop 0.00 other 0.01 | 39994 msg/s, µs/msg 22.5 | p50 0.58 p99 10.10 ms | client 1.19 | 2.3 KB/conn
+echo 2000 @20/s r2 uws            cpu 0.91 main 0.91 loop 0.00 other -0.00 | 40005 msg/s, µs/msg 22.6 | p50 0.87 p99 8.97 ms | client 1.17 | 2.3 KB/conn
+echo 2000 @20/s r2 netcode        cpu 0.82 main 0.84 loop 0.00 other -0.02 | 40004 msg/s, µs/msg 20.5 | p50 0.60 p99 9.58 ms | client 1.22 | 3.9 KB/conn | ev/deliver 8.6 cmd/submit 8.6 notify/msg 0.00 wake/msg 0.00
+echo 2000 @20/s r2 netcode@quic   cpu 0.87 main 0.05 loop 0.79 other 0.02 | 40001 msg/s, µs/msg 21.7 | p50 0.47 p99 8.11 ms | client 1.19 | 4.2 KB/conn | ev/deliver 11.5 cmd/submit 11.5 notify/msg 0.09 wake/msg 0.04
+  uws            median: cpu 0.90 (main 0.91 loop 0.00) 22.6 µs/msg 40005 msg/s p50 0.84 p99 9.84
+  netcode        median: cpu 0.82 (main 0.81 loop 0.00) 20.5 µs/msg 40004 msg/s p50 0.59 p99 9.23
+  netcode@quic   median: cpu 0.86 (main 0.05 loop 0.79) 21.4 µs/msg 40002 msg/s p50 0.61 p99 7.87
+closed 500x1 r0 uws            cpu 1.00 main 1.00 loop 0.00 other 0.01 | 59052 msg/s, µs/msg 17.0 | p50 8.37 p99 12.03 ms | client 1.07 | 5.8 KB/conn
+closed 500x1 r0 netcode        cpu 1.00 main 1.00 loop 0.00 other 0.00 | 65148 msg/s, µs/msg 15.3 | p50 7.52 p99 10.29 ms | client 1.50 | 7.7 KB/conn | ev/deliver 12.2 cmd/submit 12.2 notify/msg 0.00 wake/msg 0.00
+closed 500x1 r0 netcode@quic   cpu 1.05 main 0.04 loop 0.99 other 0.01 | 74731 msg/s, µs/msg 14.0 | p50 6.68 p99 8.52 ms | client 1.57 | 12.5 KB/conn | ev/deliver 32.4 cmd/submit 32.4 notify/msg 0.03 wake/msg 0.00
+closed 500x1 r1 netcode@quic   cpu 1.04 main 0.05 loop 1.00 other -0.00 | 75222 msg/s, µs/msg 13.9 | p50 6.63 p99 8.41 ms | client 1.65 | 13.7 KB/conn | ev/deliver 32.3 cmd/submit 32.3 notify/msg 0.03 wake/msg 0.00
+closed 500x1 r1 netcode        cpu 1.00 main 0.99 loop 0.00 other 0.01 | 64293 msg/s, µs/msg 15.6 | p50 7.58 p99 10.62 ms | client 1.47 | 7.7 KB/conn | ev/deliver 12.2 cmd/submit 12.2 notify/msg 0.00 wake/msg 0.00
+closed 500x1 r1 uws            cpu 1.00 main 0.99 loop 0.00 other 0.01 | 58861 msg/s, µs/msg 17.0 | p50 8.34 p99 13.01 ms | client 1.11 | 4.9 KB/conn
+closed 500x1 r2 uws            cpu 1.01 main 0.99 loop 0.00 other 0.01 | 58531 msg/s, µs/msg 17.2 | p50 8.39 p99 12.08 ms | client 1.10 | 5.6 KB/conn
+closed 500x1 r2 netcode        cpu 1.00 main 0.99 loop 0.00 other 0.01 | 64885 msg/s, µs/msg 15.4 | p50 7.56 p99 10.74 ms | client 1.50 | 7.8 KB/conn | ev/deliver 12.2 cmd/submit 12.2 notify/msg 0.00 wake/msg 0.00
+closed 500x1 r2 netcode@quic   cpu 1.04 main 0.04 loop 1.00 other 0.01 | 74391 msg/s, µs/msg 14.0 | p50 6.69 p99 9.14 ms | client 1.73 | 12.0 KB/conn | ev/deliver 32.2 cmd/submit 32.2 notify/msg 0.03 wake/msg 0.00
+  uws            median: cpu 1.00 (main 0.99 loop 0.00) 17.0 µs/msg 58861 msg/s p50 8.37 p99 12.08
+  netcode        median: cpu 1.00 (main 0.99 loop 0.00) 15.4 µs/msg 64885 msg/s p50 7.56 p99 10.62
+  netcode@quic   median: cpu 1.04 (main 0.04 loop 1.00) 14.0 µs/msg 74731 msg/s p50 6.68 p99 8.52
+echo 2000 @20/s tls r0 uws            cpu 0.98 main 0.96 loop 0.00 other 0.01 | 39994 msg/s, µs/msg 24.4 | p50 1.14 p99 8.94 ms | client 1.25 | 6.3 KB/conn
+echo 2000 @20/s tls r0 netcode        cpu 0.84 main 0.81 loop 0.00 other 0.02 | 40003 msg/s, µs/msg 20.9 | p50 0.42 p99 5.29 ms | client 1.23 | 24.4 KB/conn | ev/deliver 6.9 cmd/submit 6.9 notify/msg 0.00 wake/msg 0.00
+echo 2000 @20/s tls r0 netcode@quic   cpu 0.85 main 0.05 loop 0.79 other 0.01 | 40002 msg/s, µs/msg 21.3 | p50 0.51 p99 6.35 ms | client 1.26 | 24.3 KB/conn | ev/deliver 12.9 cmd/submit 12.9 notify/msg 0.08 wake/msg 0.03
+echo 2000 @20/s tls r1 netcode@quic   cpu 0.84 main 0.07 loop 0.79 other -0.01 | 40004 msg/s, µs/msg 21.1 | p50 0.60 p99 8.83 ms | client 1.16 | 24.5 KB/conn | ev/deliver 15.5 cmd/submit 15.5 notify/msg 0.06 wake/msg 0.02
+echo 2000 @20/s tls r1 netcode        cpu 0.83 main 0.81 loop 0.00 other 0.02 | 40002 msg/s, µs/msg 20.8 | p50 0.61 p99 27.17 ms | client 1.23 | 24.4 KB/conn | ev/deliver 7.6 cmd/submit 7.6 notify/msg 0.00 wake/msg 0.00
+echo 2000 @20/s tls r1 uws            cpu 0.97 main 0.96 loop 0.00 other 0.01 | 40007 msg/s, µs/msg 24.3 | p50 0.91 p99 7.39 ms | client 1.25 | 6.4 KB/conn
+echo 2000 @20/s tls r2 uws            cpu 0.97 main 0.96 loop 0.00 other 0.01 | 40002 msg/s, µs/msg 24.4 | p50 2.30 p99 26.98 ms | client 1.34 | 6.3 KB/conn
+echo 2000 @20/s tls r2 netcode        cpu 0.83 main 0.79 loop 0.00 other 0.04 | 40003 msg/s, µs/msg 20.8 | p50 0.43 p99 6.08 ms | client 1.22 | 24.3 KB/conn | ev/deliver 7.0 cmd/submit 7.0 notify/msg 0.00 wake/msg 0.00
+echo 2000 @20/s tls r2 netcode@quic   cpu 0.90 main 0.07 loop 0.78 other 0.05 | 40006 msg/s, µs/msg 22.4 | p50 0.43 p99 6.35 ms | client 1.22 | 23.9 KB/conn | ev/deliver 10.1 cmd/submit 10.1 notify/msg 0.10 wake/msg 0.04
+  uws            median: cpu 0.97 (main 0.96 loop 0.00) 24.4 µs/msg 40002 msg/s p50 1.14 p99 8.94
+  netcode        median: cpu 0.83 (main 0.81 loop 0.00) 20.8 µs/msg 40003 msg/s p50 0.43 p99 6.08
+  netcode@quic   median: cpu 0.85 (main 0.07 loop 0.79) 21.3 µs/msg 40004 msg/s p50 0.51 p99 6.35
+broadcast 32x32 @4/s r0 uws            cpu 1.01 main 1.05 loop 0.00 other -0.04 | 0 msg/s, µs/msg Infinity | p50 10453.41 p99 22575.47 ms | client 0.77 | 2.8 KB/conn
+broadcast 32x32 @4/s r0 netcode        cpu 1.00 main 1.00 loop 0.00 other 0.00 | 4087 msg/s, µs/msg 245.1 | p50 221.68 p99 439.42 ms | client 0.69 | 5.7 KB/conn | ev/deliver 14.0 cmd/submit 446.2 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @4/s r0 netcode@quic   cpu 1.02 main 0.00 loop 1.00 other 0.02 | 4130 msg/s, µs/msg 248.0 | p50 181.64 p99 302.82 ms | client 0.79 | 8.6 KB/conn | ev/deliver 36.1 cmd/submit 1157.5 notify/msg 0.03 wake/msg 0.00
+broadcast 32x32 @4/s r1 netcode@quic   cpu 1.01 main 0.01 loop 0.99 other 0.00 | 4125 msg/s, µs/msg 245.3 | p50 167.86 p99 294.69 ms | client 0.75 | 9.4 KB/conn | ev/deliver 35.5 cmd/submit 1135.2 notify/msg 0.03 wake/msg 0.00
+broadcast 32x32 @4/s r1 netcode        cpu 1.00 main 1.00 loop 0.00 other 0.00 | 4085 msg/s, µs/msg 245.2 | p50 221.86 p99 433.32 ms | client 0.78 | 6.1 KB/conn | ev/deliver 13.7 cmd/submit 436.9 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @4/s r1 uws            cpu 1.00 main 0.98 loop 0.00 other 0.02 | 0 msg/s, µs/msg Infinity | p50 10486.76 p99 22601.55 ms | client 0.72 | 2.7 KB/conn
+broadcast 32x32 @4/s r2 uws            cpu 1.01 main 0.81 loop 0.00 other 0.20 | 0 msg/s, µs/msg Infinity | p50 10377.56 p99 22348.39 ms | client 0.77 | 3.0 KB/conn
+broadcast 32x32 @4/s r2 netcode        cpu 1.00 main 1.00 loop 0.00 other 0.01 | 4097 msg/s, µs/msg 244.4 | p50 218.77 p99 436.33 ms | client 0.67 | 5.9 KB/conn | ev/deliver 13.7 cmd/submit 438.4 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @4/s r2 netcode@quic   cpu 1.02 main 0.01 loop 1.00 other 0.01 | 4080 msg/s, µs/msg 249.2 | p50 176.35 p99 301.73 ms | client 0.79 | 9.1 KB/conn | ev/deliver 35.7 cmd/submit 1141.8 notify/msg 0.03 wake/msg 0.00
+  uws            median: cpu 1.01 (main 0.98 loop 0.00) – µs/msg 0 msg/s p50 10453.41 p99 22575.47
+  netcode        median: cpu 1.00 (main 1.00 loop 0.00) 245.1 µs/msg 4087 msg/s p50 221.68 p99 436.33
+  netcode@quic   median: cpu 1.02 (main 0.01 loop 1.00) 248.0 µs/msg 4125 msg/s p50 176.35 p99 301.73
+broadcast 32x32 @2/s r0 uws            cpu 0.94 main 0.90 loop 0.00 other 0.04 | 2048 msg/s, µs/msg 461.2 | p50 2.41 p99 8.94 ms | client 0.65 | 3.5 KB/conn
+broadcast 32x32 @2/s r0 netcode        cpu 0.89 main 0.89 loop 0.00 other -0.00 | 2048 msg/s, µs/msg 436.3 | p50 1.79 p99 10.10 ms | client 0.63 | 5.1 KB/conn | ev/deliver 3.2 cmd/submit 102.7 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @2/s r0 netcode@quic   cpu 0.89 main 0.02 loop 0.92 other -0.04 | 2048 msg/s, µs/msg 434.9 | p50 1.59 p99 8.97 ms | client 0.70 | 5.9 KB/conn | ev/deliver 3.0 cmd/submit 96.0 notify/msg 0.33 wake/msg 0.31
+broadcast 32x32 @2/s r1 netcode@quic   cpu 0.90 main 0.01 loop 0.86 other 0.02 | 2048 msg/s, µs/msg 437.7 | p50 1.65 p99 8.13 ms | client 0.64 | 5.8 KB/conn | ev/deliver 3.0 cmd/submit 95.8 notify/msg 0.33 wake/msg 0.32
+broadcast 32x32 @2/s r1 netcode        cpu 0.90 main 0.87 loop 0.00 other 0.02 | 2048 msg/s, µs/msg 438.1 | p50 1.62 p99 7.73 ms | client 0.62 | 5.0 KB/conn | ev/deliver 3.0 cmd/submit 97.4 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @2/s r1 uws            cpu 0.94 main 0.94 loop 0.00 other -0.00 | 2048 msg/s, µs/msg 458.9 | p50 2.89 p99 12.58 ms | client 0.63 | 3.6 KB/conn
+broadcast 32x32 @2/s r2 uws            cpu 0.95 main 0.93 loop 0.00 other 0.02 | 2046 msg/s, µs/msg 463.0 | p50 2.77 p99 16.84 ms | client 0.67 | 3.5 KB/conn
+broadcast 32x32 @2/s r2 netcode        cpu 0.89 main 0.90 loop 0.00 other -0.01 | 2049 msg/s, µs/msg 436.8 | p50 1.51 p99 7.20 ms | client 0.67 | 5.1 KB/conn | ev/deliver 2.9 cmd/submit 93.6 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @2/s r2 netcode@quic   cpu 0.89 main 0.02 loop 0.89 other -0.02 | 2048 msg/s, µs/msg 435.5 | p50 1.90 p99 9.08 ms | client 0.64 | 6.4 KB/conn | ev/deliver 3.2 cmd/submit 101.9 notify/msg 0.31 wake/msg 0.29
+  uws            median: cpu 0.94 (main 0.93 loop 0.00) 461.2 µs/msg 2048 msg/s p50 2.77 p99 12.58
+  netcode        median: cpu 0.89 (main 0.89 loop 0.00) 436.8 µs/msg 2048 msg/s p50 1.62 p99 7.73
+  netcode@quic   median: cpu 0.89 (main 0.02 loop 0.89) 435.5 µs/msg 2048 msg/s p50 1.65 p99 8.97
+broadcast 32x32 @2/s x3 r0 uws            cpu 1.01 main 0.68 loop 0.00 other 0.33 | 0 msg/s, µs/msg Infinity | p50 14524.51 p99 31377.17 ms | client 0.71 | 3.7 KB/conn
+broadcast 32x32 @2/s x3 r0 netcode        cpu 0.91 main 0.92 loop 0.00 other -0.01 | 2048 msg/s, µs/msg 442.7 | p50 1.83 p99 10.09 ms | client 0.67 | 6.4 KB/conn | ev/deliver 3.3 cmd/submit 317.2 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @2/s x3 r0 netcode@quic   cpu 0.89 main 0.01 loop 0.89 other -0.02 | 2048 msg/s, µs/msg 434.6 | p50 1.78 p99 7.57 ms | client 0.68 | 8.2 KB/conn | ev/deliver 3.2 cmd/submit 304.0 notify/msg 0.32 wake/msg 0.30
+broadcast 32x32 @2/s x3 r1 netcode@quic   cpu 0.93 main 0.02 loop 0.91 other 0.00 | 2048 msg/s, µs/msg 453.4 | p50 2.14 p99 9.46 ms | client 0.66 | 7.4 KB/conn | ev/deliver 3.5 cmd/submit 333.6 notify/msg 0.29 wake/msg 0.27
+broadcast 32x32 @2/s x3 r1 netcode        cpu 0.90 main 0.84 loop 0.00 other 0.06 | 2048 msg/s, µs/msg 439.6 | p50 1.75 p99 10.70 ms | client 0.59 | 6.4 KB/conn | ev/deliver 3.1 cmd/submit 298.0 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @2/s x3 r1 uws            cpu 1.01 main 0.00 loop 0.00 other 1.01 | 0 msg/s, µs/msg Infinity | p50 14613.51 p99 31614.94 ms | client 0.75 | 3.7 KB/conn
+broadcast 32x32 @2/s x3 r2 uws            cpu 1.00 main 0.67 loop 0.00 other 0.34 | 0 msg/s, µs/msg Infinity | p50 14488.02 p99 31237.80 ms | client 0.75 | 3.7 KB/conn
+broadcast 32x32 @2/s x3 r2 netcode        cpu 0.89 main 0.80 loop 0.00 other 0.09 | 2049 msg/s, µs/msg 434.1 | p50 1.69 p99 7.39 ms | client 0.60 | 6.4 KB/conn | ev/deliver 3.2 cmd/submit 304.5 notify/msg 0.00 wake/msg 0.00
+broadcast 32x32 @2/s x3 r2 netcode@quic   cpu 0.90 main 0.02 loop 0.91 other -0.03 | 2048 msg/s, µs/msg 438.4 | p50 1.66 p99 6.70 ms | client 0.69 | 7.6 KB/conn | ev/deliver 3.1 cmd/submit 300.0 notify/msg 0.32 wake/msg 0.30
+  uws            median: cpu 1.01 (main 0.67 loop 0.00) – µs/msg 0 msg/s p50 14524.51 p99 31377.17
+  netcode        median: cpu 0.90 (main 0.84 loop 0.00) 439.6 µs/msg 2048 msg/s p50 1.75 p99 10.09
+  netcode@quic   median: cpu 0.90 (main 0.02 loop 0.91) 438.4 µs/msg 2048 msg/s p50 1.78 p99 7.57
+size 1KiB 500 @20/s r0 uws            cpu 0.36 main 0.35 loop 0.00 other 0.01 | 10001 msg/s, µs/msg 36.3 | p50 0.18 p99 1.16 ms | client 0.49 | 4.9 KB/conn
+size 1KiB 500 @20/s r0 netcode        cpu 0.26 main 0.24 loop 0.00 other 0.02 | 10002 msg/s, µs/msg 25.8 | p50 0.14 p99 0.72 ms | client 0.38 | 10.0 KB/conn | ev/deliver 4.5 cmd/submit 4.5 notify/msg 0.00 wake/msg 0.00
+size 1KiB 500 @20/s r0 netcode@quic   cpu 0.36 main 0.08 loop 0.33 other -0.04 | 10000 msg/s, µs/msg 36.0 | p50 0.19 p99 1.10 ms | client 0.55 | 10.7 KB/conn | ev/deliver 4.6 cmd/submit 4.6 notify/msg 0.22 wake/msg 0.13
+size 1KiB 500 @20/s r1 netcode@quic   cpu 0.34 main 0.09 loop 0.29 other -0.05 | 10003 msg/s, µs/msg 33.7 | p50 0.17 p99 0.97 ms | client 0.44 | 16.6 KB/conn | ev/deliver 4.3 cmd/submit 4.3 notify/msg 0.23 wake/msg 0.14
+size 1KiB 500 @20/s r1 netcode        cpu 0.26 main 0.26 loop 0.00 other 0.01 | 10001 msg/s, µs/msg 26.3 | p50 0.14 p99 0.81 ms | client 0.42 | 10.0 KB/conn | ev/deliver 4.5 cmd/submit 4.5 notify/msg 0.00 wake/msg 0.00
+size 1KiB 500 @20/s r1 uws            cpu 0.36 main 0.33 loop 0.00 other 0.03 | 10000 msg/s, µs/msg 36.1 | p50 0.18 p99 1.23 ms | client 0.59 | 5.2 KB/conn
+size 1KiB 500 @20/s r2 uws            cpu 0.32 main 0.32 loop 0.00 other -0.00 | 10000 msg/s, µs/msg 31.9 | p50 0.14 p99 1.07 ms | client 0.49 | 4.6 KB/conn
+size 1KiB 500 @20/s r2 netcode        cpu 0.26 main 0.25 loop 0.00 other 0.02 | 10001 msg/s, µs/msg 26.4 | p50 0.15 p99 0.81 ms | client 0.36 | 10.2 KB/conn | ev/deliver 4.7 cmd/submit 4.7 notify/msg 0.00 wake/msg 0.00
+size 1KiB 500 @20/s r2 netcode@quic   cpu 0.35 main 0.06 loop 0.23 other 0.05 | 10000 msg/s, µs/msg 34.7 | p50 0.18 p99 1.09 ms | client 0.35 | 13.9 KB/conn | ev/deliver 4.6 cmd/submit 4.6 notify/msg 0.22 wake/msg 0.13
+  uws            median: cpu 0.36 (main 0.33 loop 0.00) 36.1 µs/msg 10000 msg/s p50 0.18 p99 1.16
+  netcode        median: cpu 0.26 (main 0.25 loop 0.00) 26.3 µs/msg 10001 msg/s p50 0.14 p99 0.81
+  netcode@quic   median: cpu 0.35 (main 0.08 loop 0.29) 34.7 µs/msg 10000 msg/s p50 0.18 p99 1.09
+size 16KiB 200 @20/s r0 uws            cpu 0.21 main 0.24 loop 0.00 other -0.03 | 4001 msg/s, µs/msg 52.3 | p50 0.14 p99 0.69 ms | client 0.44 | 13.0 KB/conn
+size 16KiB 200 @20/s r0 netcode        cpu 0.15 main 0.16 loop 0.00 other -0.01 | 4000 msg/s, µs/msg 38.1 | p50 0.12 p99 0.50 ms | client 0.35 | 48.2 KB/conn | ev/deliver 2.2 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB 200 @20/s r0 netcode@quic   cpu 0.24 main 0.08 loop 0.14 other 0.01 | 4001 msg/s, µs/msg 59.1 | p50 0.17 p99 0.65 ms | client 0.34 | 56.4 KB/conn | ev/deliver 2.2 cmd/submit 2.2 notify/msg 0.45 wake/msg 0.30
+size 16KiB 200 @20/s r1 netcode@quic   cpu 0.24 main 0.07 loop 0.13 other 0.03 | 4000 msg/s, µs/msg 59.3 | p50 0.17 p99 0.63 ms | client 0.36 | 63.9 KB/conn | ev/deliver 2.2 cmd/submit 2.2 notify/msg 0.45 wake/msg 0.30
+size 16KiB 200 @20/s r1 netcode        cpu 0.15 main 0.12 loop 0.00 other 0.03 | 3999 msg/s, µs/msg 37.8 | p50 0.11 p99 0.45 ms | client 0.26 | 48.6 KB/conn | ev/deliver 2.1 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB 200 @20/s r1 uws            cpu 0.21 main 0.27 loop 0.00 other -0.05 | 4000 msg/s, µs/msg 53.7 | p50 0.14 p99 0.70 ms | client 0.49 | 12.2 KB/conn
+size 16KiB 200 @20/s r2 uws            cpu 0.22 main 0.20 loop 0.00 other 0.02 | 4000 msg/s, µs/msg 54.2 | p50 0.14 p99 0.72 ms | client 0.38 | 12.7 KB/conn
+size 16KiB 200 @20/s r2 netcode        cpu 0.15 main 0.15 loop 0.00 other -0.00 | 4000 msg/s, µs/msg 37.5 | p50 0.11 p99 0.43 ms | client 0.32 | 43.0 KB/conn | ev/deliver 2.1 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB 200 @20/s r2 netcode@quic   cpu 0.23 main 0.08 loop 0.15 other -0.00 | 4000 msg/s, µs/msg 57.4 | p50 0.16 p99 0.61 ms | client 0.31 | 53.6 KB/conn | ev/deliver 2.2 cmd/submit 2.2 notify/msg 0.46 wake/msg 0.31
+  uws            median: cpu 0.21 (main 0.24 loop 0.00) 53.7 µs/msg 4000 msg/s p50 0.14 p99 0.70
+  netcode        median: cpu 0.15 (main 0.15 loop 0.00) 37.8 µs/msg 4000 msg/s p50 0.11 p99 0.45
+  netcode@quic   median: cpu 0.24 (main 0.08 loop 0.14) 59.1 µs/msg 4000 msg/s p50 0.17 p99 0.63
+size 16KiB 200 @20/s tls r0 uws            cpu 0.29 main 0.25 loop 0.00 other 0.04 | 4000 msg/s, µs/msg 72.7 | p50 0.20 p99 0.91 ms | client 0.59 | 36.1 KB/conn
+size 16KiB 200 @20/s tls r0 netcode        cpu 0.24 main 0.23 loop 0.00 other 0.01 | 4000 msg/s, µs/msg 61.1 | p50 0.18 p99 0.69 ms | client 0.37 | 138.0 KB/conn | ev/deliver 2.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB 200 @20/s tls r0 netcode@quic   cpu 0.35 main 0.08 loop 0.22 other 0.04 | 4000 msg/s, µs/msg 87.6 | p50 0.25 p99 1.20 ms | client 0.45 | 152.0 KB/conn | ev/deliver 2.1 cmd/submit 2.1 notify/msg 0.47 wake/msg 0.32
+size 16KiB 200 @20/s tls r1 netcode@quic   cpu 0.34 main 0.09 loop 0.25 other 0.01 | 4001 msg/s, µs/msg 86.1 | p50 0.23 p99 0.86 ms | client 0.50 | 165.5 KB/conn | ev/deliver 2.0 cmd/submit 2.0 notify/msg 0.50 wake/msg 0.34
+size 16KiB 200 @20/s tls r1 netcode        cpu 0.24 main 0.20 loop 0.00 other 0.04 | 4000 msg/s, µs/msg 61.1 | p50 0.18 p99 0.70 ms | client 0.38 | 138.7 KB/conn | ev/deliver 2.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB 200 @20/s tls r1 uws            cpu 0.29 main 0.30 loop 0.00 other -0.01 | 4000 msg/s, µs/msg 73.6 | p50 0.19 p99 0.99 ms | client 0.56 | 35.5 KB/conn
+size 16KiB 200 @20/s tls r2 uws            cpu 0.29 main 0.30 loop 0.00 other -0.01 | 4000 msg/s, µs/msg 72.8 | p50 0.20 p99 0.88 ms | client 0.60 | 36.0 KB/conn
+size 16KiB 200 @20/s tls r2 netcode        cpu 0.24 main 0.21 loop 0.00 other 0.03 | 4000 msg/s, µs/msg 60.9 | p50 0.20 p99 0.78 ms | client 0.45 | 137.7 KB/conn | ev/deliver 2.2 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB 200 @20/s tls r2 netcode@quic   cpu 0.35 main 0.09 loop 0.24 other 0.02 | 4000 msg/s, µs/msg 87.6 | p50 0.23 p99 0.98 ms | client 0.49 | 150.5 KB/conn | ev/deliver 2.0 cmd/submit 2.0 notify/msg 0.50 wake/msg 0.34
+  uws            median: cpu 0.29 (main 0.30 loop 0.00) 72.8 µs/msg 4000 msg/s p50 0.20 p99 0.91
+  netcode        median: cpu 0.24 (main 0.21 loop 0.00) 61.1 µs/msg 4000 msg/s p50 0.18 p99 0.70
+  netcode@quic   median: cpu 0.35 (main 0.09 loop 0.24) 87.6 µs/msg 4000 msg/s p50 0.23 p99 0.98
+size 64KiB 50 @20/s r0 uws            cpu 0.15 main 0.17 loop 0.00 other -0.02 | 1000 msg/s, µs/msg 149.2 | p50 0.41 p99 1.09 ms | client 0.38 | 112.5 KB/conn
+size 64KiB 50 @20/s r0 netcode        cpu 0.10 main 0.09 loop 0.00 other 0.01 | 1000 msg/s, µs/msg 100.9 | p50 0.21 p99 0.90 ms | client 0.21 | 131.3 KB/conn | ev/deliver 1.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 64KiB 50 @20/s r0 netcode@quic   cpu 0.21 main 0.07 loop 0.09 other 0.06 | 1000 msg/s, µs/msg 214.9 | p50 0.54 p99 1.37 ms | client 0.27 | 839.7 KB/conn | ev/deliver 1.3 cmd/submit 1.3 notify/msg 0.77 wake/msg 0.67
+size 64KiB 50 @20/s r1 netcode@quic   cpu 0.23 main 0.07 loop 0.10 other 0.07 | 1000 msg/s, µs/msg 231.5 | p50 0.66 p99 1.46 ms | client 0.26 | 817.0 KB/conn | ev/deliver 1.4 cmd/submit 1.4 notify/msg 0.70 wake/msg 0.58
+size 64KiB 50 @20/s r1 netcode        cpu 0.11 main 0.07 loop 0.00 other 0.04 | 1000 msg/s, µs/msg 110.3 | p50 0.23 p99 1.00 ms | client 0.28 | 131.4 KB/conn | ev/deliver 1.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 64KiB 50 @20/s r1 uws            cpu 0.15 main 0.16 loop 0.00 other -0.01 | 1000 msg/s, µs/msg 148.8 | p50 0.40 p99 1.03 ms | client 0.34 | 109.4 KB/conn
+size 64KiB 50 @20/s r2 uws            cpu 0.16 main 0.15 loop 0.00 other 0.01 | 1000 msg/s, µs/msg 160.1 | p50 0.44 p99 1.11 ms | client 0.50 | 111.6 KB/conn
+size 64KiB 50 @20/s r2 netcode        cpu 0.12 main 0.10 loop 0.00 other 0.02 | 1000 msg/s, µs/msg 120.5 | p50 0.26 p99 1.02 ms | client 0.33 | 138.8 KB/conn | ev/deliver 1.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 64KiB 50 @20/s r2 netcode@quic   cpu 0.20 main 0.07 loop 0.13 other 0.00 | 1000 msg/s, µs/msg 199.1 | p50 0.52 p99 1.34 ms | client 0.31 | 829.4 KB/conn | ev/deliver 1.3 cmd/submit 1.3 notify/msg 0.75 wake/msg 0.65
+  uws            median: cpu 0.15 (main 0.16 loop 0.00) 149.2 µs/msg 1000 msg/s p50 0.41 p99 1.09
+  netcode        median: cpu 0.11 (main 0.09 loop 0.00) 110.3 µs/msg 1000 msg/s p50 0.23 p99 1.00
+  netcode@quic   median: cpu 0.21 (main 0.07 loop 0.10) 214.9 µs/msg 1000 msg/s p50 0.54 p99 1.37
+size 64KiB 50 @20/s tls r0 uws            cpu 0.32 main 0.28 loop 0.00 other 0.04 | 1000 msg/s, µs/msg 324.1 | p50 0.70 p99 1.73 ms | client 0.52 | 124.6 KB/conn
+size 64KiB 50 @20/s tls r0 netcode        cpu 0.19 main 0.20 loop 0.00 other -0.01 | 1000 msg/s, µs/msg 190.5 | p50 0.33 p99 1.28 ms | client 0.45 | 255.5 KB/conn | ev/deliver 1.3 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 64KiB 50 @20/s tls r0 netcode@quic   cpu 0.29 main 0.07 loop 0.18 other 0.04 | 1000 msg/s, µs/msg 290.7 | p50 0.68 p99 1.72 ms | client 0.36 | 909.8 KB/conn | ev/deliver 1.3 cmd/submit 1.3 notify/msg 0.78 wake/msg 0.71
+size 64KiB 50 @20/s tls r1 netcode@quic   cpu 0.33 main 0.06 loop 0.19 other 0.08 | 1000 msg/s, µs/msg 330.1 | p50 0.79 p99 1.86 ms | client 0.43 | 465.3 KB/conn | ev/deliver 1.3 cmd/submit 1.3 notify/msg 0.76 wake/msg 0.67
+size 64KiB 50 @20/s tls r1 netcode        cpu 0.21 main 0.19 loop 0.00 other 0.02 | 1000 msg/s, µs/msg 205.3 | p50 0.34 p99 1.66 ms | client 0.34 | 262.6 KB/conn | ev/deliver 1.3 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 64KiB 50 @20/s tls r1 uws            cpu 0.31 main 0.20 loop 0.00 other 0.11 | 1000 msg/s, µs/msg 307.7 | p50 0.68 p99 1.76 ms | client 0.33 | 127.0 KB/conn
+size 64KiB 50 @20/s tls r2 uws            cpu 0.34 main 0.33 loop 0.00 other 0.01 | 1000 msg/s, µs/msg 339.7 | p50 0.76 p99 1.84 ms | client 0.62 | 124.7 KB/conn
+size 64KiB 50 @20/s tls r2 netcode        cpu 0.20 main 0.12 loop 0.00 other 0.07 | 1000 msg/s, µs/msg 196.3 | p50 0.34 p99 1.34 ms | client 0.23 | 260.9 KB/conn | ev/deliver 1.3 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 64KiB 50 @20/s tls r2 netcode@quic   cpu 0.31 main 0.06 loop 0.18 other 0.07 | 1000 msg/s, µs/msg 308.9 | p50 0.72 p99 1.71 ms | client 0.32 | 527.6 KB/conn | ev/deliver 1.3 cmd/submit 1.3 notify/msg 0.79 wake/msg 0.71
+  uws            median: cpu 0.32 (main 0.28 loop 0.00) 324.1 µs/msg 1000 msg/s p50 0.70 p99 1.76
+  netcode        median: cpu 0.20 (main 0.19 loop 0.00) 196.3 µs/msg 1000 msg/s p50 0.34 p99 1.34
+  netcode@quic   median: cpu 0.31 (main 0.06 loop 0.18) 308.9 µs/msg 1000 msg/s p50 0.72 p99 1.72
+size 16KiB closed 50x1 r0 uws            cpu 1.03 main 0.99 loop 0.00 other 0.03 | 39586 msg/s, µs/msg 25.9 | p50 1.25 p99 2.74 ms | client 1.92 | 39.6 KB/conn
+size 16KiB closed 50x1 r0 netcode        cpu 1.04 main 0.99 loop 0.00 other 0.05 | 53070 msg/s, µs/msg 19.5 | p50 0.91 p99 1.84 ms | client 2.29 | 103.7 KB/conn | ev/deliver 8.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB closed 50x1 r0 netcode@quic   cpu 1.23 main 0.20 loop 0.94 other 0.08 | 51806 msg/s, µs/msg 23.7 | p50 0.91 p99 2.20 ms | client 2.29 | 870.4 KB/conn | ev/deliver 21.4 cmd/submit 21.4 notify/msg 0.05 wake/msg 0.01
+size 16KiB closed 50x1 r1 netcode@quic   cpu 1.24 main 0.21 loop 0.97 other 0.06 | 51726 msg/s, µs/msg 24.0 | p50 0.91 p99 2.22 ms | client 2.30 | 888.4 KB/conn | ev/deliver 21.2 cmd/submit 21.2 notify/msg 0.05 wake/msg 0.01
+size 16KiB closed 50x1 r1 netcode        cpu 1.04 main 0.99 loop 0.00 other 0.05 | 53258 msg/s, µs/msg 19.5 | p50 0.91 p99 1.95 ms | client 2.41 | 104.8 KB/conn | ev/deliver 8.0 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB closed 50x1 r1 uws            cpu 1.03 main 1.00 loop 0.00 other 0.03 | 39575 msg/s, µs/msg 25.9 | p50 1.24 p99 2.75 ms | client 1.85 | 38.4 KB/conn
+size 16KiB closed 50x1 r2 uws            cpu 1.03 main 1.00 loop 0.00 other 0.03 | 40238 msg/s, µs/msg 25.5 | p50 1.21 p99 2.83 ms | client 1.89 | 45.4 KB/conn
+size 16KiB closed 50x1 r2 netcode        cpu 1.04 main 0.99 loop 0.00 other 0.05 | 53136 msg/s, µs/msg 19.5 | p50 0.91 p99 1.89 ms | client 2.40 | 101.4 KB/conn | ev/deliver 7.9 cmd/submit Infinity notify/msg 0.00 wake/msg 0.00
+size 16KiB closed 50x1 r2 netcode@quic   cpu 1.23 main 0.21 loop 0.95 other 0.07 | 51759 msg/s, µs/msg 23.8 | p50 0.92 p99 2.15 ms | client 2.30 | 857.0 KB/conn | ev/deliver 21.3 cmd/submit 21.3 notify/msg 0.05 wake/msg 0.01
+  uws            median: cpu 1.03 (main 1.00 loop 0.00) 25.9 µs/msg 39586 msg/s p50 1.24 p99 2.75
+  netcode        median: cpu 1.04 (main 0.99 loop 0.00) 19.5 µs/msg 53136 msg/s p50 0.91 p99 1.89
+  netcode@quic   median: cpu 1.23 (main 0.21 loop 0.95) 23.8 µs/msg 51759 msg/s p50 0.91 p99 2.20
+ccu 10000 @1/s r0 uws            cpu 0.36 main 0.33 loop 0.00 other 0.03 | 10000 msg/s, µs/msg 36.4 | p50 0.17 p99 1.15 ms | client 0.47 | 1.4 KB/conn
+ccu 10000 @1/s r0 netcode        cpu 0.30 main 0.27 loop 0.00 other 0.03 | 10000 msg/s, µs/msg 29.6 | p50 0.16 p99 0.84 ms | client 0.47 | 2.6 KB/conn | ev/deliver 4.2 cmd/submit 4.2 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r0 netcode@quic   cpu 0.37 main 0.05 loop 0.29 other 0.03 | 10000 msg/s, µs/msg 37.1 | p50 0.18 p99 1.24 ms | client 0.57 | 2.5 KB/conn | ev/deliver 4.1 cmd/submit 4.1 notify/msg 0.24 wake/msg 0.14
+ccu 10000 @1/s r1 netcode@quic   cpu 0.36 main 0.06 loop 0.32 other -0.01 | 10000 msg/s, µs/msg 36.5 | p50 0.18 p99 1.25 ms | client 0.51 | 2.5 KB/conn | ev/deliver 4.2 cmd/submit 4.2 notify/msg 0.24 wake/msg 0.14
+ccu 10000 @1/s r1 netcode        cpu 0.30 main 0.25 loop 0.00 other 0.05 | 10001 msg/s, µs/msg 29.6 | p50 0.15 p99 0.91 ms | client 0.52 | 2.6 KB/conn | ev/deliver 4.1 cmd/submit 4.1 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r1 uws            cpu 0.37 main 0.37 loop 0.00 other -0.00 | 10003 msg/s, µs/msg 37.2 | p50 0.17 p99 1.15 ms | client 0.56 | 1.4 KB/conn
+ccu 10000 @1/s r2 uws            cpu 0.37 main 0.35 loop 0.00 other 0.01 | 10001 msg/s, µs/msg 36.5 | p50 0.16 p99 1.25 ms | client 0.58 | 1.4 KB/conn
+ccu 10000 @1/s r2 netcode        cpu 0.30 main 0.26 loop 0.00 other 0.05 | 10000 msg/s, µs/msg 30.3 | p50 0.16 p99 1.00 ms | client 0.51 | 2.6 KB/conn | ev/deliver 4.2 cmd/submit 4.2 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r2 netcode@quic   cpu 0.36 main 0.05 loop 0.30 other 0.00 | 10000 msg/s, µs/msg 35.6 | p50 0.17 p99 1.00 ms | client 0.55 | 2.5 KB/conn | ev/deliver 3.9 cmd/submit 3.9 notify/msg 0.25 wake/msg 0.14
+  uws            median: cpu 0.37 (main 0.35 loop 0.00) 36.5 µs/msg 10001 msg/s p50 0.17 p99 1.15
+  netcode        median: cpu 0.30 (main 0.26 loop 0.00) 29.6 µs/msg 10000 msg/s p50 0.16 p99 0.91
+  netcode@quic   median: cpu 0.36 (main 0.05 loop 0.30) 36.5 µs/msg 10000 msg/s p50 0.18 p99 1.24

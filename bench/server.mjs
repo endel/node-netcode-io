@@ -1,13 +1,15 @@
 // A WebSocket echo or room broadcast with nothing on top, served by netcode-io
 // or uWebSockets.js; run.mjs forks it:
-//   node server.mjs <uws|netcode|netcode-DIR> <port> <plain|tls> [workUs] [echo|broadcast:N[:K]]
+//   node server.mjs <uws|netcode|netcode-DIR>[@node|@quic] <port> <plain|tls> [workUs] [echo|broadcast:N[:K]]
 // IPC: "start" opens a window, "stop" answers with its metrics.
 import { createRequire } from 'module';
-import { pathToFileURL } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { performance } from 'perf_hooks';
 
 const require = createRequire(import.meta.url);
-const [name, portArg, security, workArg, modeArg] = process.argv.slice(2);
+const [nameArg, portArg, security, workArg, modeArg] = process.argv.slice(2);
+// "@quic": netcode's websocket.thread, else NETCODE_THREAD's
+const [name, threadArg] = nameArg.split('@');
 const port = Number(portArg);
 const tls = security === 'tls';
 // 0.0.0.0 lets a CCU run spread its connections over 127.0.0.x, past one address's ~64k ports
@@ -32,7 +34,8 @@ function leave(room, member) {
 // netcode-DIR: another build's lib/ and zig-out/ copied to ./netcode-DIR, for A/B runs
 // netcode-kept: this tree, messages kept past the call; netcode-DIR: a snapshot
 const KEPT = name === 'netcode-kept';
-const NETCODE = name.startsWith('netcode-') && !KEPT ? new URL(`./${name}`, import.meta.url).pathname : new URL('..', import.meta.url).pathname;
+// a path, not a URL's pathname: on Windows that reads /C:/…
+const NETCODE = fileURLToPath(name.startsWith('netcode-') && !KEPT ? new URL(`./${name}`, import.meta.url) : new URL('..', import.meta.url));
 // uWebSockets.js isn't a dependency: point UWS at an installed copy
 const UWS = process.env.UWS ?? 'uWebSockets.js';
 const CERT = `${NETCODE}/test/certs/server.crt`;
@@ -73,7 +76,7 @@ if (name === 'uws') {
   const { Server } = await import(pathToFileURL(`${NETCODE}/lib/index.js`).href);
   let server;
   const roomOf = new Map();
-  server = new Server({ host: HOST, port, cert: CERT, key: KEY, websocket: { tls, maxConnections: 1 << 20, pingInterval: 0, maxMessageSize: 1 << 20, maxSendBuffer: 16 << 20, transientMessages: !KEPT, thread: process.env.NETCODE_THREAD } }, {
+  server = new Server({ host: HOST, port, cert: CERT, key: KEY, websocket: { tls, maxConnections: 1 << 20, pingInterval: 0, maxMessageSize: 1 << 20, maxSendBuffer: 16 << 20, transientMessages: !KEPT, thread: threadArg ?? process.env.NETCODE_THREAD } }, {
     onWsOpen: (ws) => { if (roomSize) { roomOf.set(ws, join(ws)); } },
     onWsClose: (ws) => { leave(roomOf.get(ws), ws); roomOf.delete(ws); },
     onWsMessage: (ws, data, isText) => {
@@ -108,7 +111,8 @@ process.on('message', (m) => {
       elu: performance.eventLoopUtilization(w.elu).utilization,
       messagesPerSecond: (messages - w.messages) / seconds,
       stats: delta,
+      rss: process.memoryUsage.rss(),
     });
   }
 });
-process.send({ type: 'ready' });
+process.send({ type: 'ready', rss: process.memoryUsage.rss() });

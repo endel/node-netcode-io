@@ -1,0 +1,9 @@
+ccu 10000 @1/s r0 uws            cpu 0.38 main 0.34 loop 0.00 other 0.04 | 10000 msg/s, µs/msg 38.0 | p50 0.18 p99 1.21 ms | client 0.52 | 1.4 KB/conn
+ccu 10000 @1/s r0 netcode-base   cpu 0.32 main 0.31 loop 0.00 other 0.01 | 9999 msg/s, µs/msg 31.9 | p50 0.16 p99 1.02 ms | client 0.52 | 18.7 KB/conn | ev/deliver 4.0 cmd/submit 4.0 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r0 netcode        cpu 0.31 main 0.31 loop 0.00 other 0.00 | 10001 msg/s, µs/msg 31.3 | p50 0.16 p99 1.00 ms | client 0.47 | 18.7 KB/conn | ev/deliver 4.0 cmd/submit 4.0 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r1 netcode        cpu 0.31 main 0.29 loop 0.00 other 0.02 | 9999 msg/s, µs/msg 31.3 | p50 0.16 p99 0.92 ms | client 0.50 | 18.7 KB/conn | ev/deliver 4.0 cmd/submit 4.0 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r1 netcode-base   cpu 0.30 main 0.29 loop 0.00 other 0.02 | 10000 msg/s, µs/msg 30.5 | p50 0.15 p99 0.92 ms | client 0.46 | 18.7 KB/conn | ev/deliver 4.0 cmd/submit 4.0 notify/msg 0.00 wake/msg 0.00
+ccu 10000 @1/s r1 uws            cpu 0.35 main 0.36 loop 0.00 other -0.01 | 10000 msg/s, µs/msg 35.3 | p50 0.15 p99 1.08 ms | client 0.60 | 1.4 KB/conn
+  uws            median: cpu 0.38 (main 0.36 loop 0.00) 38.0 µs/msg 10000 msg/s p50 0.18 p99 1.21
+  netcode-base   median: cpu 0.32 (main 0.31 loop 0.00) 31.9 µs/msg 10000 msg/s p50 0.16 p99 1.02
+  netcode        median: cpu 0.31 (main 0.31 loop 0.00) 31.3 µs/msg 10001 msg/s p50 0.16 p99 1.00
